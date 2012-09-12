@@ -4,6 +4,7 @@
 \usepackage{lmodern}
 \usepackage[utf8]{inputenc}
 \usepackage[swedish,english]{babel}
+%\usepackage[frenchlinks]{hyperref}
 \usepackage{xjobb/modifications}
 \title{TODO: Real-Time Isolation of Thread-Based Extensions}
 
@@ -11,7 +12,15 @@
 \foreigntitle{TODO: Realtidsisolering av trådbaserade insticksmoduler}
 \author{Peter Boström}
 \date{TODO: December 2012}
-\blurb{Master's Thesis at CSC\\\vspace{4mm}Project Provider: Propellerhead Software AB\\Supervisor: Prof. Sten Ternström\\Examiner: Prof. Johan Håstad}
+\blurb{
+	Master's Thesis at CSC\\\vspace{8mm}
+	\begin{tabular}{rl}
+		Supervisor: & Prof. Sten Ternström \\
+		Examiner: & Prof. Johan Håstad \\
+		\\
+		Project Provider: & Propellerhead Software AB \\
+	\end{tabular}
+	}
 \trita{TODO: TRITA xxx yyyy-nn}
 \begin{document}
 \frontmatter
@@ -29,7 +38,11 @@
 
 \input{parts/intro.tex}
 
-\input{parts/threat-model.tex}
+\input{parts/sandbox.tex}
+
+\input{parts/memory.tex}
+
+\input{parts/external.tex}
 
 \appendix
 \addappheadtotoc

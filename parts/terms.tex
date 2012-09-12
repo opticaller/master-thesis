@@ -1,6 +1,12 @@
 \chapter{Acronyms and Terms}\label{appA}
 
+Acronyms and terms can be ambiguous in general, here follow definitions of how
+they are used inside this thesis.
+
 \begin{description}
+	\item[API] Application Programming Interface, a specification intended to
+		be used as an interface by software components to communicate with each
+		other.
 	\item[Context] The minimal set of data used by a task that must be saved
 		to allow a task interruption, and a continuation of this task at the
 		point it has been interrupted and at an arbitrary future date.
@@ -9,10 +15,18 @@
 		the same point at a later time.
 	\item[CPU] Central Processing Unit, the hardware within a computer system
 		which carries out the instructions of a computer program.
+	\item[Extension] A set of software components that adds specific abilities
+		to a program.
+	\item[Host] Main program in which one or more \emph{extensions} run.
 	\item[IPC] See \emph{Inter-Process Communication}.
 	\item[Inter-Process Communication] A set of methods for the exchange of
 		data among multiple threads in one or more processes.
+	\item[Kernel]  A program that constitutes the central core of a computer
+		operating system. It has complete control over everything that occurs
+		in the system. 
 	\item[Process] An instance of a computer program that is being executed.
+	\item[System call] A request for services from the operating system's
+		kernel.
 	\item[Thread] A lightweight \emph{process}. Multiple threads can exist
 		within the same process and share resources such as memory, while
 		different processes in general do not.

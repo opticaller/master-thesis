@@ -1,0 +1,31 @@
+\chapter{Sandbox}
+
+To limit what an extension or another piece of program can do, restrictions
+must be imposed on code actually running on a system. Programs in general
+should not interfere with each other's execution. Neither should they be able
+to read each other's data. It is also common to restrict which processes are
+able to make system calls and restrict access to other resources, such as files
+etc. Enforcing file-system permissions, superuser privileges etc. are
+responsibilities of the kernel.
+
+The same principles apply for extensions. A main application is trusted to run
+code with its user's privileges, but program extensions are expected to only
+access to the resources they require to perform their specific task.
+
+\section{Memory Accesses}
+
+A program should in general not be able to read from or write to another
+program's memory. Not properly protecting programs can for instance result in
+sensitive data, such as cryptographic keys or passwords in memory leaking to
+other processes. Writing to another process' memory, either on purpose or
+accidentally, invalidate its executing state completely.
+
+The same principles should apply to extensions as well. An extension should not
+be allowed to peek or modify its host's data. Ideally, neither should it be
+able to do the same for other program extensions.
+
+\section{Restricting External Function Calls}
+
+Restricting which library function calls are available to an extension limits
+how it's able to communicate with the outside world. For example, restricting
+access to stdin/stdout and other file descriptors, sockets or pipes.
