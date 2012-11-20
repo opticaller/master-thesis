@@ -1,0 +1,71 @@
+\chapter {LLVM Assembly Language}
+
+\begin{quote}
+LLVM is a Static Single Assignment (SSA) based representation that provides
+type safety, low-level operations, flexibility, and the capability of
+representing `all' high-level languages cleanly. It is the common code
+representation used throughout all phases of the LLVM compilation strategy.
+\end{quote}
+
+\noindent The LLVM compiler infrastructure provides an easy way of manipulating
+code in the LLVM intermediate representation (IR) format. Modifying code
+already compiled to this intermediate format enables our implementation to
+support multiple languages that are already supported by LLVM front-ends rather
+than a specific language.
+
+Operating in this RISC-like intermediate format also provides a clear and
+simple distinction between instructions performed on memory and arithmetics
+performed on temporary values. Consider an instruction set where \texttt{load}
+and \texttt{store} are the only instructions which read or modify memory. In
+such an instruction set a compiler pass used for protecting memory only have to
+consider these two instructions. LLVM IR has a few more instructions which
+operate on memory which we have to consider, but they're still relatively few
+and easily enumerable.
+
+Quote: \texttt{http://llvm.org/docs/LangRef.html}
+
+RISC: \texttt{http://www.drdobbs.com/architecture-and-design/the-design-of-llvm/240001128}
+
+\section {Modules}
+
+LLVM programs consists of modules. Each module corresponds to a translation
+unit of the compiler and can contain functions, global variables and
+symbol-table entries. These modules can be linked together using the LLVM
+linker. For the purpose of this thesis we consider a plugin to be a single
+module. That is, before running our compiler pass, the plugin has to be linked
+into a single module.
+
+What is a module? \texttt{http://llvm.org/docs/LangRef.html}
+
+\section {Instructions}
+
+List of instructions. Which have to be instrumented, and how? Which IR version?
+
+Most instructions are concerning register stuff, don't operate on memory. TODO
+SSA
+
+\subsection {Modify reads/writes/both?}
+
+Why? Why not? Wuzzaaaaah?
+Depends on purpose!
+
+DEFENDS ON PURPOSE!
+
+\subsection {Type-Safety}
+
+TODO: LLVM IR's type safety, how it affects us, and why it's awesome.
+
+\subsection {\texttt{load}}
+
+And why
+
+how should they be handled?
+
+Size of operand etc.?
+
+\subsection {\texttt{store}}
+
+\subsection {\texttt{llvm.memcpy}}
+
+\subsection {\texttt{bah}}
+
