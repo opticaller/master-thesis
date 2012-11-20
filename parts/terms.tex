@@ -1,34 +1,50 @@
-\chapter{Acronyms and Terms}\label{appA}
+\chapter {Acronyms and Terms} \label{appA}
 
 Acronyms and terms can be ambiguous in general, here follow definitions of how
 they are used inside this thesis.
 
-\begin{description}
-	\item[API] Application Programming Interface, a specification intended to
+\begin {description}
+	\item [API] Application Programming Interface, a specification intended to
 		be used as an interface by software components to communicate with each
 		other.
-	\item[Context] The minimal set of data used by a task that must be saved
+	\item [Context] The minimal set of data used by a task that must be saved
 		to allow a task interruption, and a continuation of this task at the
 		point it has been interrupted and at an arbitrary future date.
-	\item[Context switching] The process of storing and restoring the
+	\item [Context switching] The process of storing and restoring the
 		\emph{context} of a \emph{CPU} so that execution can be resumed from
 		the same point at a later time.
-	\item[CPU] Central Processing Unit, the hardware within a computer system
+	\item [CPU] Central Processing Unit, the hardware within a computer system
 		which carries out the instructions of a computer program.
-	\item[Extension] A set of software components that adds specific abilities
+	\item [Extension] A set of software components that adds specific abilities
 		to a program.
-	\item[Host] Main program in which one or more \emph{extensions} run.
-	\item[IPC] See \emph{Inter-Process Communication}.
-	\item[Inter-Process Communication] A set of methods for the exchange of
+	\item [GCC] GNU Compiler Collection, the standard compiler by most other
+		modern Unix-like computer operating systems.
+	\item [Host] Main program and environment in which one or more
+		\emph{extensions} run.
+	\item [IPC] See \emph{Inter-Process Communication}.
+	\item [Instruction] A single operation of a processor defined by an
+		instruction-set architecture.
+	\item [Inter-Process Communication] A set of methods for the exchange of
 		data among multiple threads in one or more processes.
-	\item[Kernel]  A program that constitutes the central core of a computer
+	\item [Intrinsic function] A function available for use in a given language
+		whose implementation is handled specially by the compiler.
+	\item [Kernel] A program that constitutes the central core of a computer
 		operating system. It has complete control over everything that occurs
-		in the system. 
-	\item[Process] An instance of a computer program that is being executed.
-	\item[System call] A request for services from the operating system's
+		in the system.
+	\item [Platform] A hardware architecture and a software framework
+		(including application frameworks), where the combination allows
+		software to run.
+	\item [Process] An instance of a computer program that is being executed.
+	\item [Signal] An asynchronous notification sent to a process or to a
+		specific thread within the same process in order to notify it of an
+		event that occurred. When a signal is sent, the operating system
+		interrupts the target process's normal flow of execution.
+	\item [SIMD] Single instruction, multiple data.
+	\item [SIMD instruction] An instruction manipulating multiple data.
+	\item [System call] A request for services from the operating system's
 		kernel.
-	\item[Thread] A lightweight \emph{process}. Multiple threads can exist
+	\item [Thread] A lightweight \emph{process}. Multiple threads can exist
 		within the same process and share resources such as memory, while
 		different processes in general do not.
-\end{description}
+\end {description}
 

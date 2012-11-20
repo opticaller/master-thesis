@@ -1,4 +1,4 @@
-\chapter{Sandbox}
+\chapter {Sandboxing}
 
 To limit what an extension or another piece of program can do, restrictions
 must be imposed on code actually running on a system. Programs in general
@@ -8,11 +8,25 @@ able to make system calls and restrict access to other resources, such as files
 etc. Enforcing file-system permissions, superuser privileges etc. are
 responsibilities of the kernel.
 
-The same principles apply for extensions. A main application is trusted to run
-code with its user's privileges, but program extensions are expected to only
-access to the resources they require to perform their specific task.
+Ideally the same principles would apply for extensions. An application is
+trusted to run code with its user's privileges, but extensions are expected to
+only access to the resources they require to perform their specific task.
+Ideally an extension should only be isolated from its environment and only be
+able to access resources which it's permitted to use.
 
-\section{Memory Accesses}
+\section {Existing Implementations}
+
+\subsection {Chromium}
+
+The web browser Chromium's sandbox operates on process level. Its Windows
+implementation operates by lowering its own privileges irrevocably before
+executing.
+
+By default, plug-ins for Chromium do not run in its sandbox however, as
+plug-ins can have arbitrary behavior, and some require accessing the file
+system. They do run in a different and communicate with Chromium's kernel.
+
+\section {Memory Accesses}
 
 A program should in general not be able to read from or write to another
 program's memory. Not properly protecting programs can for instance result in
@@ -24,8 +38,27 @@ The same principles should apply to extensions as well. An extension should not
 be allowed to peek or modify its host's data. Ideally, neither should it be
 able to do the same for other program extensions.
 
-\section{Restricting External Function Calls}
+\section {Restricting External Function Calls}
 
 Restricting which library function calls are available to an extension limits
 how it's able to communicate with the outside world. For example, restricting
 access to stdin/stdout and other file descriptors, sockets or pipes.
+
+\section {Function Pointers}
+
+Arbitrary function calls could potentially be done using function pointers. If
+an extension could figure out where a piece of code resides
+
+\section {Assembly Code}
+
+Arbitrary code etc. Non-portable. Run arbitrary code. Maybe figure out where
+some dynamically-loaded functions reside and call those directly. System calls
+are often implemented through interrupts. 
+
+Functionality which should be optimized using assembly code on select platforms
+can be abstracted and placed in an API call to be implemented per-platform by
+the host. Similar to intrinsic functions in GCC to provide SIMD instructions
+without using assembly code. The host implementation can then provide an
+optimized implementation on platforms where specific SIMD instructions are
+available, but also a provide portable version when they are not.
+

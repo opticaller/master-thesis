@@ -1,4 +1,4 @@
-\chapter{Memory Isolation}
+\chapter {Memory Isolation}
 
 To protect the host and other threads from trashing their heaps/stacks or
 otherwise modifying their internal variables, memory accesses must be checked.
@@ -7,11 +7,11 @@ Memory protection available on most <TODO>
 The extension should be able to access its stack and dynamically allocated
 memory.
 
-\section{Dynamic-Memory Allocation Model}
+\section {Dynamic-Memory Allocation Model}
 
-\subsection{Shared Heap}
+\subsection {Shared Heap}
 
-\subsection{Per-Extension Address Spaces}
+\subsection {Per-Extension Address Spaces}
 
 Placing each extension's stack and heap into its own continuous address space
 allows for a single coarse-grained check against start and end address. On
@@ -24,21 +24,41 @@ On the other hand, if the address space for an extension runs out, it can't
 allocate more memory. Moving an extension's address space would however require
 translating every pointer pointing to the block itself as well.
 
-
 \section {Bounds-Checking Memory Accesses}
 
-\subsection{Coarse Extension Stack/Heap Bounds}
+Mention Valgrind. Also Valgrind's overhead. Mention ASan.
+
+\subsection {Bounds-Checking Stack and All Blocks From \texttt{malloc()} }
+
+\subsection {Coarse Extension Stack/Heap Bounds}
 
 Provided we place it inside an aligned block of size $2^n$ gives us an address
 range similar to \texttt{0x12340000-0x1234FFFF} (on a 32-bit system). To check
-whether a byte is within this range, we can simply \texttt{AND} with its base
-address \texttt{0x12340000} and check that the result is the same as the base
-address.
+whether a byte is within this range, we can simply \texttt{AND} with a bitmask
+matching the base-address bits, \texttt{0xFFFC0000}, and check that the result
+matches the base address \texttt{0x12340000}.
 
-\subsection{Bounds-Checking Stack and All Blocks From \texttt{malloc()}
-	and \texttt{free()}}
+\subsection {Address Sanitizer}
 
-\section{Tracking Pointer Use}
+Stuff about asan.
 
-\section{Load/Store Instructions}
+\section {Tracking Pointer Use}
 
+\section {Load/Store Instructions}
+
+\section {alloca}
+
+\section {Hooking \texttt{malloc()}}
+
+\subsection {Hooking LIBC}
+
+LIBC provides callback hooks that are called after malloc and friends occur.
+
+Doesn't work. free can't occur before it's ok, eg. a plugin shouldn't be
+allowed to free a chunk allocated by the main thread.
+
+<TODO References>
+
+\subsection {LD\_PRELOAD}
+
+<TODO + TODO References>

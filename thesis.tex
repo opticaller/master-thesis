@@ -5,48 +5,60 @@
 \usepackage[utf8]{inputenc}
 \usepackage[swedish,english]{babel}
 %\usepackage[frenchlinks]{hyperref}
-\usepackage{xjobb/modifications}
-\title{TODO: Real-Time Isolation of Thread-Based Extensions}
+\usepackage {xjobb/modifications}
+\title {TODO: Real-Time Isolation of Native Thread-Based Extensions}
 
-\subtitle{TODO: Confinement of Thread-Based Extensions using LLVM}
-\foreigntitle{TODO: Realtidsisolering av trådbaserade insticksmoduler}
-\author{Peter Boström}
-\date{TODO: December 2012}
-\blurb{
+\subtitle {TODO: Confinement of Thread-Based Extensions using LLVM}
+\foreigntitle {TODO: Realtidsisolering av trådbaserade insticksmoduler}
+\author {Peter Boström}
+\date {TODO: December 2012}
+\blurb {
 	Master's Thesis at CSC\\\vspace{8mm}
-	\begin{tabular}{rl}
+	\begin {tabular}{rl}
 		Supervisor: & Prof. Sten Ternström \\
 		Examiner: & Prof. Johan Håstad \\
 		\\
 		Project Provider: & Propellerhead Software AB \\
-	\end{tabular}
+	\end {tabular}
 	}
-\trita{TODO: TRITA xxx yyyy-nn}
-\begin{document}
+\trita {TODO: TRITA xxx yyyy-nn}
+\begin {document}
 \frontmatter
-\pagestyle{empty}
+\pagestyle {empty}
 \removepagenumbers
 \maketitle
-\selectlanguage{english}
+\selectlanguage {english}
 
-\input{parts/abstract.tex}
+\input {parts/abstract.tex}
 
 \clearpage
 \tableofcontents*
 \mainmatter
-\pagestyle{newchap}
+\pagestyle {newchap}
 
-\input{parts/intro.tex}
+\input {parts/intro.tex}
 
-\input{parts/sandbox.tex}
+\part {Background}
 
-\input{parts/memory.tex}
+\input {parts/sandbox.tex}
 
-\input{parts/external.tex}
+\input {parts/memory.tex}
+
+\part {NEW STUFF}
+
+\input {parts/llvm-ir.tex}
+
+\input {parts/shadow.tex}
+
+\input {parts/globals.tex}
+
+\input {parts/external.tex}
+
+\input {parts/management.tex}
 
 \appendix
 \addappheadtotoc
 
-\input{parts/appendix.tex}
+\input {parts/appendix.tex}
 
 \end{document}
