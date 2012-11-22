@@ -1,10 +1,29 @@
 \chapter {Implementation Outline}
 
-We propose a solution to sandboxing these individually that is based on the
-research behind Address Sanitizer (ASan)[ref to earlier chap mentioning asan].
-ASan presents a shadow-memory model with much less overhead than previously 
-thought possible[ref-to-asan-paper (can I say this?)].
+We propose a solution to sandboxing plugin instances individually. This is in
+accordance with the project provider's policy for multiple plugin instances.
+This actually complicates the process, as global variables in code can no
+longer be shared between plugin instances, as they're not allowed to access
+them themselves.
 
-Different is that we've modifed blah blah
+On purpose the following chapters describe variations on specific issues and
+when they can be used. Combinations of different solutions to sub-problems can
+be used for effectively determining a policy for how plugins are allowed to
+behave.
+
+In the more complex case of thread-pool driven tasks, where there's not a
+one-to-one mapping between threads and plugin instances some issues arise. We
+will discuss some of these issues in the following chapters as well.
+
+Finally, we'd like to emphasize that determining which configuration to use is
+highly dependant factors such as the purpose of sandboxing for the particular
+program, performance requirements and the mapping between threads and plugin
+instances; there's no one-size fits all.
+
+\section {one section for each following chapter}
+
+Aim to transform (potentially) malicious code to safe code.
 
 \section {Where? Host? Before ``submitting''? Trusted ``AppStore'' thing?}
+
+
