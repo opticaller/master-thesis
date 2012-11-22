@@ -1,0 +1,38 @@
+\chapter {Hosting Environment}
+
+The `host'. Stuff about that.
+
+\section {Error Recovery}
+
+Ideally a plugin instance should shut down gracefully when misbehaving.
+Allocated resources, such as memory or file descriptors, should be deallocated
+or closed. These resources need to be tracked, even for the case where a plugin
+doesn't per-se misbehave. Even if a plugin exits properly, but haven't for
+instance closed file descriptors or \texttt{free}'d all allocated memory, we'd
+have memory leaks that can potentially be quite severe.
+
+The requirements for properly sandboxed plugins are more strict than that
+however. A malicious plugin can call any external functions with completely
+arbitrary arguments. This includes double-\texttt{free}'ing previously
+allocated memory, a bug which can lead to serious memory corruption for the
+entire process from which it is not able to recover.
+
+This provides a clear protection domain. Any function calls external to the
+module must be individually examined, and all arguments sanity checked.
+\texttt{div} for instance can't expect a non-zero divisor. It also means that
+no external function call can expect a following call with certain arguments;
+\texttt{malloc} can't expect \texttt{free}, \texttt{fopen} can't expect
+\texttt{fclose}. External functions will be discussed further in Chapter
+{chapref}. 
+
+In short, there should be no state from which the host can't recover. No code
+should, after modification, be able to make the host environment misbehave.
+
+\subsection {Signal Handling}
+
+Signals indicating errors should cause a plugin instance to shut down, and
+indicate to the managing thread that this occurred. The host can then free
+resources allocated to the plug-in. The host can then optionally reboot the
+thread and plugin.
+
+TODO: Describe that signal handler.
