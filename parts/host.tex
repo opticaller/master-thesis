@@ -21,9 +21,9 @@ This provides a clear protection domain. Any function calls external to the
 module must be individually examined, and all arguments sanity checked.
 \texttt{div} for instance can't expect a non-zero divisor. It also means that
 no external function call can expect a following call with certain arguments;
-\texttt{malloc} can't expect \texttt{free}, \texttt{fopen} can't expect
-\texttt{fclose}. External functions will be discussed further in Chapter
-{chapref}. 
+\texttt{malloc} can't expect a matching \texttt{free}, \texttt{fopen} can't
+expect a matching \texttt{fclose}. External functions will be discussed further
+in Chapter {chapref}. 
 
 In short, there should be no state from which the host can't recover. No code
 should, after modification, be able to make the host environment misbehave.
