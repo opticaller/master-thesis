@@ -1,7 +1,34 @@
 \chapter {Introduction}
 
-Extensions are used to add capabilities to existing software.
+Software extensions or plugins are used to add additional or optional
+capabilities to software. These plugins are often be written by third-parties,
+and not the software developers themselves. Such code can potentially be very
+malicious and wreak havoc on an user's system when running unrestricted code. It
+is not uncommon that a plugin runs native code with the same privileges as the
+hosting application. [can I get a quote?]
 
+Very often, this is not desired. Most plugins only need to be able to access
+a few functions in a certain API, in order to communicate back to the process.
+They might not need to write files to disk, or read an user's private data. This
+is where sandboxing comes in. Sandboxing is a security mechanism for running
+untrusted programs (or plugins) safely. A good sandbox provides a restricted set
+of resources that the code is allowed to use.
+
+Following the principle of least privilige[?], plugins should only be allowed to
+use as much, or as little, that they actually require to perform their tasks.
+An example where where programs explicitly request access to resources are
+Android applications, where at least a few resources, such as network access
+have to be explicitly requested upon installation. The user can then decide
+whether they trust the program to use those resources or not.
+
+A few solutions to the sandboxing problem involve either limiting the plugin to
+use a scripting language using a specific API, or running each plugin in a
+separate process, and using operating-system specific sandboxing features for
+lowering their priviliges and restricting their potential impact.
+
+Communication between processes and processes can be costly and having separate
+processes introduce overhead.
+<FORTSÄTT HÄR>
 IPC (Inter-Process Communication) techniques used by a process-based extension
 to communicate with its host back and forth can be costly.
 
