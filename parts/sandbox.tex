@@ -14,35 +14,37 @@ only access to the resources they require to perform their specific task.
 Ideally an extension should only be isolated from its environment and only be
 able to access resources which it's permitted to use.
 
-\section {Existing Implementations}
-
-\subsection {Chromium}
-
-The web browser Chromium's sandbox operates on process level. Its Windows
-implementation operates by lowering its own privileges irrevocably before
-executing.
-
-By default, plug-ins for Chromium do not run in its sandbox however, as
-plug-ins can have arbitrary behavior, and some require accessing the file
-system. They do run in a different and communicate with Chromium's kernel.
-
 \section {Memory Accesses}
 
 A program should in general not be able to read from or write to another
 program's memory. Not properly protecting programs can for instance result in
-sensitive data, such as cryptographic keys or passwords in memory leaking to
-other processes. Writing to another process' memory, either on purpose or
-accidentally, invalidate its executing state completely.
+sensitive data, such as cryptographic keys or passwords in memory leaking.
+Writing to another process' memory, either on purpose or accidentally, can
+invalidate its executing state completely. On most modern systems this is taken
+care of by hardware which notifices the operating system of memory-access
+violations.
 
 The same principles should apply to extensions as well. An extension should not
 be allowed to peek or modify its host's data. Ideally, neither should it be
-able to do the same for other program extensions.
+able to read from or write to other plugin instances, which relates to running
+them in separate sandboxes or a single shared one.
 
-\section {Restricting External Function Calls}
+\section {Restricting External Calls}
 
-Restricting which library function calls are available to an extension limits
-how it's able to communicate with the outside world. For example, restricting
-access to stdin/stdout and other file descriptors, sockets or pipes.
+If all functions, signals, etc. were to be available to plugins, they'd have the
+same capabilities as the user running them. This also means that the user must
+trust every plugin and every program they would install and run equally. As a
+plugin often performs a small specific set of tasks, this is seldom required.
+Restricting access to functions without side effect, such as sorting, binary
+search and math functions is pointless however. They might be useful and do no
+harm.
+
+Rack Extensions for instance operate on audio buffers in-memory, and don't need
+to read/write files or raise signals on their own. Therefore a Rack Extension is
+compiled against a stripped-down, slightly modified C standard library and API
+functions specific to interacting with the plugin host. In addition to the
+security aspect, a limited API also communicate how plugins should be written
+and how they should behave.
 
 \section {Function Pointers}
 
@@ -56,9 +58,29 @@ some dynamically-loaded functions reside and call those directly. System calls
 are often implemented through interrupts. 
 
 Functionality which should be optimized using assembly code on select platforms
-can be abstracted and placed in an API call to be implemented per-platform by
+can be abstracted and placed in an API call and be implemented per-platform by
 the host. Similar to intrinsic functions in GCC to provide SIMD instructions
 without using assembly code. The host implementation can then provide an
 optimized implementation on platforms where specific SIMD instructions are
 available, but also a provide portable version when they are not.
+
+\section {Existing Sandboxing Techniques}
+
+\subsection {Chromium}
+
+The web browser Chromium's sandbox operates on process level. Its Windows
+implementation operates by lowering its own privileges irrevocably before
+executing.
+
+By default, plug-ins for Chromium do not run in its sandbox however, as
+plug-ins can have arbitrary behavior, and some require accessing the file
+system. They do run in a different and communicate with Chromium's kernel.
+
+\subsection {Virtual Machines}
+
+todo
+
+\subsection {libdetox}
+
+...
 
