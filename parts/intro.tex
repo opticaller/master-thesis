@@ -42,7 +42,7 @@ can't perform mixing yet.
 Any overhead introduced by context switching can be a limiting factor on the
 amount of plugins that can be simultaneously loaded, even if each instance only
 performs a minimal amount of work. IPC (Inter-Process Communication) can be done
-through a number of ways, files, sockets, shared memory etc. But they always
+through a number of ways; files, sockets, shared memory etc. But they always
 incur some overhead in addition to context switching.
 
 Threads are known to have less overhead and a thread-pool-driven plugin
