@@ -1,11 +1,23 @@
 \chapter {Memory Isolation}
 
-To protect the host and other threads from trashing their heaps/stacks or
-otherwise modifying their internal variables, memory accesses must be checked.
-Memory protection available on most <TODO>
+To protect the host and other plugins from having their heaps and/or stacks
+modified, memory accesses between plugins and the host (and other programs) must
+be checked in one way or another. Memory protection is a part of most modern
+operating systems, and often has hardware support. This mechanism protects other
+processes from incorrect memory accesses to their memory. Naturally, all memory
+within a single process is shared by every thread of execution and all access
+control implemented on a per-process process level [quote fuckyes?].
+ 
+Inherently, this built-in protection offered by the operating system is not
+applicable to a plugin model where memory is shared, such as in the thread-based
+environment provided by Reason.
 
-The extension should be able to access its stack and dynamically allocated
-memory.
+TODO: Memory-error checking
+
+TODO: Shadow memory
+
+The extension should be able to access its stack variables and dynamically
+allocated memory.
 
 \section {Dynamic-Memory Allocation Model}
 
