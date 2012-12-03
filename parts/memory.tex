@@ -12,6 +12,7 @@ Inherently, this built-in protection offered by the operating system is not
 applicable to a plugin model where memory is shared, such as in the thread-based
 environment provided by Reason.
 
+
 \section {Error-Detection Tools}
 
 Fortunately a lot of erroneous-memory-usage behavior can be detected in user
@@ -49,6 +50,7 @@ encoded into this shadow map. This way we can detect not only if the memory is
 ok to access by the entire program, but also if it can be accessed by the actual
 plugin instance. This part is covered later in Chapter [REFERENCE HERE].
 
+
 \section {Valgrind}
 
 Overhead.
@@ -59,6 +61,7 @@ Overhead.
 
 \subsection {Shadow Map}
 
+
 \section {AddressSanitizer}
 
 Stuff.
@@ -68,6 +71,7 @@ Stuff.
 \subsection {Characteristsics}
 
 \subsection {Shadow Map}
+
 
 \section {Per-Instance Address Spaces}
 
@@ -91,4 +95,3 @@ allocate more memory. Moving an extension's address space would however require
 translating every pointer pointing to the block itself as well.
 
 TODO: Downsides, doesn't protect stack, return addresses etc.
-

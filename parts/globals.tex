@@ -3,10 +3,12 @@
 Naturally, globals can't be shared directly when every piece of memory is owned
 by a process.
 
+
 \section {Read-Only?}
 
 Loads not modified => globals can be shared. They're still write-protected from
 instructions writing to memory.
+
 
 \section {Global Inits}
 
@@ -18,6 +20,7 @@ Can also disallow global\_ctors.
 Can also say they're not allowed to access external function calls. This way
 they can only be assigned data based on the struct. Modify init-calls as well
 to use thread-local struct.
+
 
 \section {Thread-Pool Problems}
 
