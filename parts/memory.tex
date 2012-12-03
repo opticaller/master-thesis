@@ -12,12 +12,34 @@ Inherently, this built-in protection offered by the operating system is not
 applicable to a plugin model where memory is shared, such as in the thread-based
 environment provided by Reason.
 
-TODO: Memory-error checking
+Fortunately a lot of erroneous-memory-usage behavior can be detected in user
+space by using memory-error-detection tools. What they do essentially,
+regardless of how they implement it, is that when a program is run under it
+every memory access becomes checked, and some kind of error is reported when
+incorrect usage is detected. The tools differ in what errors they detect and,
+how likely they're detected and how they can be used. Some, such as Valgrind
+[link to paper here], use runtime techniques, such as dynamic recompilation and
+run binaries out of the box. Others require that a program is recompiled in a
+certain way, such as specifying additional compile-time flags. Inherently
+Valgrind can be used to detect memory errors in a program to which the source
+code or build environment is not readily available.
 
-TODO: Shadow memory
+To be relevant to our problem however, errors need to be able to be detected at
+the point of occurance, so that a plugin can abort when trying to do something
+it's not allowed to do, and not after. The main difference between our solution
+implies and what memory-error detectors provide out of the box is that the
+error detectors work on a per-process basis, so a memory access is either OK or
+not. We need a tool to detect whether a memory access is ok to perform for a
+certain plugin instance.
 
-The extension should be able to access its stack variables and dynamically
-allocated memory.
+Common to the two tools which we summarize for background purpose is that they
+use some sort of shadow map. That is, memory addresses mapped to a shadow value
+which stores some data related to that range of addresses. The tools differ in
+granularity. For instance, Valgrind detects errors on a bit level, while
+Address Sanitizer detects errors on a per-byte level. For this thesis we
+consider a model in which the plugin instance is actually encoded into this
+shadow map. This way we can detect not only if the memory is ok to access by the
+entire program, but also if it can be accessed by the actual plugin instance.
 
 \section {Dynamic-Memory Allocation Model}
 
