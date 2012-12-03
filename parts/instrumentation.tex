@@ -7,3 +7,15 @@ Blah blah opt pass.
 Arbitrary function calls could potentially be done using function pointers. If
 an extension could figure out where a piece of code resides
 
+\section {Assembly Code}
+
+Arbitrary code etc. Non-portable. Run arbitrary code. Maybe figure out where
+some dynamically-loaded functions reside and call those directly. System calls
+are often implemented through interrupts. 
+
+Functionality which should be optimized using assembly code on select platforms
+can be abstracted and placed in an API call and be implemented per-platform by
+the host. Similar to intrinsic functions in GCC to provide SIMD instructions
+without using assembly code. The host implementation can then provide an
+optimized implementation on platforms where specific SIMD instructions are
+available, but also a provide portable version when they are not.
