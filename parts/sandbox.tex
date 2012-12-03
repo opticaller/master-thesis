@@ -8,7 +8,7 @@ able to make system calls and restrict access to other resources, such as files
 etc. Enforcing file-system permissions, superuser privileges etc. are
 responsibilities of the kernel.
 
-Ideally the same principles would apply for extensions. An application is
+Ideally the same principles would apply for extensions. A program is generally
 trusted to run code with its user's privileges, but extensions are expected to
 only access to the resources they require to perform their specific task.
 Ideally an extension should only be isolated from its environment and only be
@@ -46,25 +46,15 @@ functions specific to interacting with the plugin host. In addition to the
 security aspect, a limited API also communicate how plugins should be written
 and how they should behave.
 
-\section {Function Pointers}
-
-Arbitrary function calls could potentially be done using function pointers. If
-an extension could figure out where a piece of code resides
-
-\section {Assembly Code}
-
-Arbitrary code etc. Non-portable. Run arbitrary code. Maybe figure out where
-some dynamically-loaded functions reside and call those directly. System calls
-are often implemented through interrupts. 
-
-Functionality which should be optimized using assembly code on select platforms
-can be abstracted and placed in an API call and be implemented per-platform by
-the host. Similar to intrinsic functions in GCC to provide SIMD instructions
-without using assembly code. The host implementation can then provide an
-optimized implementation on platforms where specific SIMD instructions are
-available, but also a provide portable version when they are not.
-
 \section {Existing Sandboxing Techniques}
+
+\subsection {Virtual Machines}
+
+todo
+
+\subsection {libdetox}
+
+...
 
 \subsection {Chromium}
 
@@ -75,12 +65,3 @@ executing.
 By default, plug-ins for Chromium do not run in its sandbox however, as
 plug-ins can have arbitrary behavior, and some require accessing the file
 system. They do run in a different and communicate with Chromium's kernel.
-
-\subsection {Virtual Machines}
-
-todo
-
-\subsection {libdetox}
-
-...
-
