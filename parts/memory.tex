@@ -1,4 +1,4 @@
-\chapter {Memory Isolation}
+\chapter {Memory-Error Detection}
 
 To protect the host and other plugins from having their heaps and/or stacks
 modified, memory accesses between plugins and the host (and other programs) must
@@ -12,17 +12,21 @@ Inherently, this built-in protection offered by the operating system is not
 applicable to a plugin model where memory is shared, such as in the thread-based
 environment provided by Reason.
 
+\section {Error-Detection Tools}
+
 Fortunately a lot of erroneous-memory-usage behavior can be detected in user
 space by using memory-error-detection tools. What they do essentially,
-regardless of how they implement it, is that when a program is run under it
-every memory access becomes checked, and some kind of error is reported when
-incorrect usage is detected. The tools differ in what errors they detect and,
-how likely they're detected and how they can be used. Some, such as Valgrind
-[link to paper here], use runtime techniques, such as dynamic recompilation and
-run binaries out of the box. Others require that a program is recompiled in a
-certain way, such as specifying additional compile-time flags. Inherently
-Valgrind can be used to detect memory errors in a program to which the source
-code or build environment is not readily available.
+regardless of their implementation, is that when a program is run under it every
+memory access becomes checked, and some kind of error is reported when incorrect
+usage is detected.
+
+The tools differ in what errors they detect and, how likely they're detected and
+how they can be used. Some, such as Valgrind [link-to-paper-here], use runtime
+techniques, such as dynamic recompilation and run binaries out of the box.
+Others require that a program is recompiled in a certain way, such as specifying
+additional compile-time flags. Inherently Valgrind can be used to detect memory
+errors in a program to which the source code or build environment is not readily
+available.
 
 To be relevant to our problem however, errors need to be able to be detected at
 the point of occurance, so that a plugin can abort when trying to do something
@@ -36,16 +40,44 @@ Common to the two tools which we summarize for background purpose is that they
 use some sort of shadow map. That is, memory addresses mapped to a shadow value
 which stores some data related to that range of addresses. The tools differ in
 granularity. For instance, Valgrind detects errors on a bit level, while
-Address Sanitizer detects errors on a per-byte level. For this thesis we
-consider a model in which the plugin instance is actually encoded into this
-shadow map. This way we can detect not only if the memory is ok to access by the
-entire program, but also if it can be accessed by the actual plugin instance.
+AddressSanitizer detects errors on a per-byte level. The tools also replace or
+hook memory-related functions including as \texttt{malloc} or \texttt{free} to
+be able to track valid memory blocks.
 
-\section {Dynamic-Memory Allocation Model}
+For this thesis we'll consider a model in which the plugin instance is actually
+encoded into this shadow map. This way we can detect not only if the memory is
+ok to access by the entire program, but also if it can be accessed by the actual
+plugin instance. This part is covered later in Chapter [REFERENCE HERE].
 
-\subsection {Shared Heap}
+\section {Valgrind}
 
-\subsection {Per-Extension Address Spaces}
+Overhead.
+
+\subsection {Hooks}
+
+\subsection {Characteristsics}
+
+\subsection {Shadow Map}
+
+\section {AddressSanitizer}
+
+Stuff.
+
+\subsection {Hooks}
+
+\subsection {Characteristsics}
+
+\subsection {Shadow Map}
+
+\section {Per-Instance Address Spaces}
+
+Though not part of our final solution to memory protection, we'd like to mention
+another even more coarse-grained error-detection technique considered before
+finding AddressSanitizer, and why it was ultimately discarded even before
+finding the AddressSanitizer pass and paper.
+
+TODO: More text here. And fix the following paragraphs.. Still requires
+instrumentation, asan better.
 
 Placing each extension's stack and heap into its own continuous address space
 allows for a single coarse-grained check against start and end address. On
@@ -58,41 +90,5 @@ On the other hand, if the address space for an extension runs out, it can't
 allocate more memory. Moving an extension's address space would however require
 translating every pointer pointing to the block itself as well.
 
-\section {Bounds-Checking Memory Accesses}
+TODO: Downsides, doesn't protect stack, return addresses etc.
 
-Mention Valgrind. Also Valgrind's overhead. Mention ASan.
-
-\subsection {Bounds-Checking Stack and All Blocks From \texttt{malloc()} }
-
-\subsection {Coarse Extension Stack/Heap Bounds}
-
-Provided we place it inside an aligned block of size $2^n$ gives us an address
-range similar to \texttt{0x12340000-0x1234FFFF} (on a 32-bit system). To check
-whether a byte is within this range, we can simply \texttt{AND} with a bitmask
-matching the base-address bits, \texttt{0xFFFC0000}, and check that the result
-matches the base address \texttt{0x12340000}.
-
-\subsection {Address Sanitizer}
-
-Stuff about asan.
-
-\section {Tracking Pointer Use}
-
-\section {Load/Store Instructions}
-
-\section {alloca}
-
-\section {Hooking \texttt{malloc()}}
-
-\subsection {Hooking LIBC}
-
-LIBC provides callback hooks that are called after malloc and friends occur.
-
-Doesn't work. free can't occur before it's ok, eg. a plugin shouldn't be
-allowed to free a chunk allocated by the main thread.
-
-<TODO References>
-
-\subsection {LD\_PRELOAD}
-
-<TODO + TODO References>
