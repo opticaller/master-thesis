@@ -1,0 +1,52 @@
+\chapter* {Project Description}
+
+\begin {quote}
+    \emph {The following text was written as an introduction to Propellerhead
+           and the master-thesis project by Erik Agsjö and Gustaf Taxén.}
+\end {quote}
+
+Formed in 1994, Propellerhead (\url {http://www.propellerheads.se/}) is a
+privately owned company based in Stockholm, Sweden. Renowned for its
+musician-centric approach, Propellerhead has created some of the world's most
+innovative music software applications, hardware interfaces and technology
+standards.
+
+Musicians, producers and the media have praised \emph {Reason}, \emph {ReCycle}
+and \emph {ReBirth} applications for being inspiring, great sounding and of
+superior quality. Technologies such as \emph {ReWire} and the \emph {REX} file
+format are de-facto industry standards, implemented in all major music software.
+Today, Propellerhead’s products are used all over the world by hundreds of
+thousands of professionals and enthusiasts for all kinds of music making.
+
+In the summer of 2012, Propellerhead launched one of the most significant
+updates to the Reason software: \textbf {Rack Extensions}. Rack Extensions are
+third-party plug-ins for Reason that extends the capabilities of the Reason host
+in various ways. Examples include (virtual) instruments, sound effects
+processors, and audio analysis utilities. All Rack Extensions are sold
+exclusively in the Propellerhead on-line shop,
+\url {http://shop.propellerheads.se/}.
+
+Propellerhead focuses very strongly on quality and robustness and the Rack
+Extension concept is no exception. Once a Rack Extension has been approved by
+Propellerhead, it will be supported in Reason indefinitely, and songs created
+with an old version of a Rack Extension will continue to work even if the Rack
+Extension is updated by its developer. Each Rack Extension runs in a protected
+sandbox environment inside Reason, which ensures that the user does not lose any
+data if the Rack Extension should crash. Rack Extensions are also highly
+portable and the format assumes very little about the operating environment in
+which the Reason host is running (Reason is currently available for Mac OSX and
+Windows, in both 32- and native 64-bit versions).
+
+Real-time audio processing is computationally expensive, so Rack Extensions are
+written in C++ for efficiency reasons. However, third-party developers do not
+submit C++ source code to Propellerhead. Instead, we use the portable byte code
+format of the LLVM compiler. This ensures that the implementation details of the
+third party code are protected, while allowing Propellerhead to maintain the
+submitted code indefinitely, without having to keep in contact with the original
+developer.
+
+In summary, Rack Extension plugins are \emph {portable},
+\emph {computationally efficient}, and \emph {robust}. The Reason host already
+provides a very strong environment with respect to these requirements, but there
+are a number of areas that could be improved. This Master’s Thesis focuses on
+some of these areas.
