@@ -2,6 +2,23 @@
 
 The `host'. Stuff about that.
 
+TODO: Clear responsibility domain. Host code: Shuts down on
+      signals/plugin-initiated aborts (memory errors). Instrumented plugin is
+      responsible for calling abort functions prior to misbehavior. Instrumented
+      code: Trusted. Uninstrumented code: Not so much.
+
+
+\section {Plugin Types}
+
+\subsection {Continuously-Running Plugins}
+
+Plugins running on its own, doing its thing. Naturally takes a 1-to-1 mapping?
+
+\subsection {Event-Based}
+
+Plugins respond to events, such as audio-buffer callbacks. This can take the
+form of tasks, where §
+
 
 \section {Global Initialization}
 
