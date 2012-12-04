@@ -1,11 +1,36 @@
 \chapter {Hosting Environment}
 
-The `host'. Stuff about that.
+The host is responsible for providing a state in which the plugin can be loaded,
+unloaded and execute properly, a hosting environment. This of course includes
+loading/unloading, restarting and shutdown of plugins, as well as initialization
+of any data that may be used by the plugins themselves etc. Though the
+compilation pass used to instrument the code should ideally be done by the host
+itself, this policy and its implications, along with the pass itself is
+described later in Chapter [ref].
 
-TODO: Clear responsibility domain. Host code: Shuts down on
-      signals/plugin-initiated aborts (memory errors). Instrumented plugin is
-      responsible for calling abort functions prior to misbehavior. Instrumented
-      code: Trusted. Uninstrumented code: Not so much.
+The host is also responsible for keeping track of plugin resources and providing
+an API to allocate, access and free these. This includes usage of standard
+memory-allocation functions such as \texttt{malloc} and \texttt{new}, keeping
+track of file descriptors etc. Associating these resources with a specific
+plugin instance prevents resource leaking after the instance has been shut down.
+
+Even though instrumented plugin code is considered \emph{trusted}, certain
+operations, such as integer divisions aren't checked. Thus it's still possible
+for plugins to raise signals in some environments for certain operations, such
+as division by zero. Though this particular case could have been dealt with by
+instrumenting every single divide instruction, it's easier and more effective to
+have a signal handler to catch these types of errors, which trigger hardware
+interrupts and have no additional overhead when used correctly. Apart from
+raising these signals which can be caught by the host, the instrumentation pass
+is responsible for generating instrumented code that aborts before (if) any
+code which would have behaved maliciously or otherwise incorrect executes.
+
+The hosting environment includes external functions available to the plugin,
+including, not only the host's plugin API but also library functions in the C
+standard library and any system-specific functions such as the POSIX API. For
+instance, if a plugin raises the POSIX signal \texttt{SIGKILL}, the signal can
+not be blocked or ignored by the program, forcing it to abort.[ref] External
+functions, including plugin APIs are covered further in Chapter [ref].
 
 
 \section {Plugin Types}
@@ -18,6 +43,12 @@ Plugins running on its own, doing its thing. Naturally takes a 1-to-1 mapping?
 
 Plugins respond to events, such as audio-buffer callbacks. This can take the
 form of tasks, where §
+
+
+\section {Resource Limits}
+
+Blah blah, too much memory, using too much cpu, not responding fast enough (tick
+takes forever). TODO
 
 
 \section {Global Initialization}
@@ -41,8 +72,8 @@ Ideally a plugin instance should shut down gracefully when misbehaving.
 Allocated resources, such as memory or file descriptors, should be deallocated
 or closed. These resources need to be tracked, even for the case where a plugin
 doesn't per-se misbehave. Even if a plugin exits properly, but haven't for
-instance closed file descriptors or \texttt{free}'d all allocated memory, we'd
-have memory leaks that can potentially be quite severe.
+instance closed file descriptors or \texttt{free}'d all allocated memory, there
+would be resource/memory leaks, potentially quite severe.
 
 The requirements for properly sandboxed plugins are more strict than that
 however. A malicious plugin can call any external functions with completely
@@ -59,7 +90,8 @@ expect a matching \texttt{fclose}. External functions will be discussed further
 in Chapter {chapref}. 
 
 In short, there should be no state from which the host can't recover. No code
-should, after modification, be able to make the host environment misbehave.
+should, after being instrumented, be able to make the host environment
+misbehave.
 
 \subsection {Signal Handling}
 
