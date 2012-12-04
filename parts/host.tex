@@ -35,14 +35,34 @@ functions, including plugin APIs are covered further in Chapter [ref].
 
 \section {Plugin Types}
 
+Plugins 
+
 \subsection {Continuously-Running Plugins}
 
-Plugins running on its own, doing its thing. Naturally takes a 1-to-1 mapping?
+A plugin which continuously runs, occasionally requesting/providing information
+back to the host naturally occupies at least one thread. Though a multi-threaded
+plugin would also be possible, each thread could be assigned the same
+plugin-instance id, this has some negative implications on the model proposed.
+
+The model proposes that the instrumented code performs each memory operation in
+two steps: Validate a memory operation, then perform it. Since this isn't done
+atomically, another thread running the same plugin instance could invalidate the
+check before, or even during, the actual memory operation. For instance, freeing
+a previously allocated block when the other thread writes to it. Another plugin
+could even have allocated and rewritten the entire block. To be consistent this
+two-step check has to be performed atomically. The trivial solution would be to
+add a shared global lock for every single memory operation, which would have
+devastating consequences for performance.
+
+For a one-to-one mapping between threads and plugins like these (single-threaded
+continuously-running plugins), we expect nothing out of the ordinary.
 
 \subsection {Event-Based}
 
 Plugins respond to events, such as audio-buffer callbacks. This can take the
 form of tasks, where §
+
+\subsection {Hybrid Model}
 
 
 \section {Resource Limits}
