@@ -37,6 +37,9 @@ error detectors work on a per-process basis, so a memory access is either OK or
 not. We need a tool to detect whether a memory access is ok to perform for a
 certain plugin instance.
 
+
+\section {Shadow Map}
+
 Common to the two tools which we summarize for background purpose is that they
 use some sort of shadow map. That is, memory addresses mapped to a shadow value
 which stores some data related to that range of addresses. The tools differ in
@@ -49,6 +52,10 @@ For this thesis we'll consider a model in which the plugin instance is actually
 encoded into this shadow map. This way we can detect not only if the memory is
 ok to access by the entire program, but also if it can be accessed by the actual
 plugin instance. This part is covered later in Chapter [REFERENCE HERE].
+
+\subsection {Multi-Level Shadow Map}
+
+Blah blah Valgrind more levels, ASan single level.
 
 
 \section {Valgrind}
