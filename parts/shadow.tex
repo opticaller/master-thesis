@@ -4,12 +4,11 @@ The shadow-memory model used by AddressSanitizer is very simple. A process'
 entire memory space gets mapped to a fraction of it. For instance, with an $1:8$
 compression, one continuous eigth of the addressable memory space gets reserved.
 8 bytes of memory in the address space then correspond to one byte in this
-map. The value of the byte encodes which of the 8 bytes are allocated. For this
-thesis, the compression ratio between shadow memory and main memory is a power
-of two. It may be possible, albeit more complicated and seemingly more
-ineffective, to have any other another compression ratio. We however find no
-reason to support such use. Dividing with powers of two are simply bit shifts,
-and most memory alignment is a power of two as well.
+map. The value of the byte encodes which of the 8 bytes are allocated. We'd like
+to point out that for this thesis, the compression ratio between shadow memory
+and main memory is a power of two. Though it may be technically possible to use
+other alignments, we find no reason to explore this area, LLVM doesn't support
+those alignments and instrumented code can be more efficient with powers of two.
 
 AddressSanitizer instruments LLVM Bitcode so that, when allocating memory, the
 corresponding fraction of addresses get marked as allocated in the shadow
@@ -28,18 +27,12 @@ protection and isolation, not a debugging tool.
 For shadow-map specfics, we would like to point out AddressSantizer as the
 authoritive implementation of this shadow-memory technique. We have been able to
 reproduce the essential memory mapping in AddressSanitizer, with simliar
-overhead, but their implementation in \texttt{clang} is way more mature. Their
+overhead, but their implementation in Clang is way more mature. Their
 paper[ref] also provide a good benchmark over performance hits imposed by the
 technique.
 
 
 \section {Shadow Compression}
-
-The compression ratio between real memory and shadow memory directly affects
-performance. If an aligned memory access is smaller than the compression ratio
-then only a single check in the shadow is needed. This is crucial to be able to
-provide access to basic types, such as \texttt{int}, \texttt{float} and
-\texttt{double}, with acceptable overhead.
 
 This single-level shadow map makes a $1:1$ mapping impossible, the shadow memory
 would occupy the entire memory space and leave no room even for the running
@@ -48,15 +41,22 @@ code. $1:2$ mappings would reserve half of the address space and so forth. On
 of magnitude larger than the physical memory available. 32-bit systems however
 have significantly limited address space.
 
+The compression ratio between real memory and shadow memory directly affects
+performance. If an aligned memory access is smaller than the compression ratio
+then only a single check in the shadow is needed. This is crucial to be able to
+provide access to basic types, such as \texttt{int}, \texttt{float} and
+\texttt{double}, with acceptable overhead.
 
-\section {Memory Allocation}
-Lightweight implementation, asan should be authoritative. Also has more
-features.
+\subsection {Memory Allocation}
 
-\subsection {Overlapping}
+Compression ratio corellates to 
+
+
+\subsection {Inter-Block Accesses}
 
 
 \section {Memory Alignment}
 
 Alignment + Access Size <= Compression Ratio => One check.
+
 
