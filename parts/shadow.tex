@@ -4,20 +4,22 @@ The shadow-memory model used by AddressSanitizer is very simple. A process'
 entire memory space gets mapped to a fraction of it. For instance, with an $1:8$
 compression, one continuous eigth of the addressable memory space gets reserved.
 8 bytes of memory in the address space then correspond to one byte in this
-map. The value of the byte encodes which of the 8 bytes are allocated. We make
-the reasonable assumption that with this ratio $1:n$, $n$ is a power of two.
-This, among other things, allows for faster instrumented code, as division by
-$n$ is simply a bit-shift.
+map. The value of the byte encodes which of the 8 bytes are allocated. For this
+thesis, the compression ratio between shadow memory and main memory is a power
+of two. It may be possible, albeit more complicated and seemingly more
+ineffective, to have any other another compression ratio. We however find no
+reason to support such use. Dividing with powers of two are simply bit shifts,
+and most memory alignment is a power of two as well.
 
-LLVM Bitcode is then instrumented so that, when allocating memory, the
-corresponding fraction of addresses get marked as allocated in the map. The code
-is also instrumented so that, before every instruction which operates on memory,
-assertions are inserted to check their correctness before actually performing
-them.
+AddressSanitizer instruments LLVM Bitcode so that, when allocating memory, the
+corresponding fraction of addresses get marked as allocated in the shadow
+memory. The code is also instrumented so that, before every instruction which
+operates on memory, assertions are inserted to check their correctness before
+actually performing them.
 
 We propose a different encoding into the same shadow-map scheme. Whereas
-AddressSanitizer encodes into this byte how many of the corresponding $n$ ($n = 8$
-in this case) original bytes have been allocated, we propose encoding a
+AddressSanitizer encodes into this byte how many of the corresponding $n$
+($n = 8$ in this case) original bytes have been allocated, we propose encoding a
 plugin-instance id instead. This way, we lose granularity, as a single $n$-byte
 block is either ok to read or write, or not. But it allows us to perform a quick
 check on whether the read is OK or not. The proposition is primarily a means of
@@ -50,6 +52,8 @@ have significantly limited address space.
 \section {Memory Allocation}
 Lightweight implementation, asan should be authoritative. Also has more
 features.
+
+\subsection {Overlapping}
 
 
 \section {Memory Alignment}
