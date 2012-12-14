@@ -18,11 +18,12 @@ actually performing them.
 
 We propose a different encoding into the same shadow-map scheme. Whereas
 AddressSanitizer encodes into this byte how many of the corresponding $n$
-($n = 8$ in this case) original bytes have been allocated, we propose encoding a
-plugin-instance id instead. This way, we lose granularity, as a single $n$-byte
-block is either ok to read or write, or not. But it allows us to perform a quick
-check on whether the read is OK or not. The proposition is primarily a means of
-protection and isolation, not a debugging tool.
+($n = 8$ in the previous case) original bytes have been allocated, we propose
+encoding a plugin-instance id instead. This way, we lose granularity, as a
+single $n$-byte block is either ok to read or write, or not. But it allows us to
+perform a quick check on whether the read is OK or not. The proposition is
+primarily a means of protection and isolation, not a debugging tool. Other
+encodings are of course possible, as well as different tools.
 
 For shadow-map specfics, we would like to point out AddressSantizer as the
 authoritive implementation of this shadow-memory technique. We have been able to
@@ -47,12 +48,23 @@ then only a single check in the shadow is needed. This is crucial to be able to
 provide access to basic types, such as \texttt{int}, \texttt{float} and
 \texttt{double}, with acceptable overhead.
 
-\subsection {Memory Allocation}
+\subsection {Granularity}
 
-Compression ratio corellates to 
+As memory-access is granted based on memory blocks and not individual bytes,
+memory must be handled in multiples of the compression ratio and be aligned to
+the compression ratio boundary. For a $1:8$ ratio, that means all memory
+allocation must occur in multiples of $8$ and its base address be a multiple of
+$8$. This should, of course, be invisible to the plugin and sufficient memory
+should be allocated to accomodate the requested allocation size aligned to the
+proper boundary, as well as allocating any remaining space in the final block.
 
 
-\subsection {Inter-Block Accesses}
+\section {Memory Allocation}
+
+Let's fucking do it.
+
+
+\section {Accesses across boundaries}
 
 
 \section {Memory Alignment}
