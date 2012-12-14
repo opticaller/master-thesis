@@ -33,6 +33,12 @@ paper[ref] also provide a good benchmark over performance hits imposed by the
 technique.
 
 
+\section {Whitelist/Blacklist differences}
+
+TODO: Fill me? Does ASan really Blacklist edges? We whitelist allocated memory,
+not poison zones around them.
+
+
 \section {Shadow Compression}
 
 This single-level shadow map makes a $1:1$ mapping impossible, the shadow memory
@@ -61,7 +67,33 @@ proper boundary, as well as allocating any remaining space in the final block.
 
 \section {Memory Allocation}
 
-Let's fucking do it.
+Any memory usable by the plugin directly (without external function calls) needs
+to, regardless of how it was allocated, be marked as owned by the plugin
+instance before being used. After the memory is used 
+
+\subsection {Heap Allocation}
+
+Mark: malloc and related functions
+
+Unmark: free
+
+Allocation plus freeing.
+
+\subsection {Stack Allocation}
+
+Mark: Function prologue
+
+Unmark: Function epilogue
+
+At first glance, a simple solution to the stack-allocation problem would be to,
+once and for all, mark each entire stack space upon thread creation to belong to
+a plugin instance. Apart from forcing a 1:1 mapping between plugin instances and
+threads, this has serious security implications as well. The plugin should only
+be able to access the memory on the stack used for variables. It should not be
+able to otherwise alter the execution stack in any manner. If such alteration
+were possible from a plugin it could, intentionally or not, smash the stack,
+introduce buffer overruns and quite easily execute return-to-libc[ref-phrack]
+attacks to break out of its own sandbox and run uninstrumented code.
 
 
 \section {Accesses across boundaries}
