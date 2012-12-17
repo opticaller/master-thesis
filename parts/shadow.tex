@@ -65,25 +65,38 @@ should be allocated to accomodate the requested allocation size aligned to the
 proper boundary, as well as allocating any remaining space in the final block.
 
 
-\section {Memory Allocation}
+\section {Memory Management}
 
 Any memory usable by the plugin directly (without external function calls) needs
 to, regardless of how it was allocated, be marked as owned by the plugin
-instance before being used. After the memory is used 
+instance before it can being used. After the memory is no longer accessible to
+the plugin instance it needs to be unmarked.
+
+Heap-allocated memory is a resource which needs to be tracked and validated when
+sent as a parameter to free or realloc etc. A plugin instance should not be able
+to free random memory addresses, as this can cause serious memory corruption. As
+the host needs to shut down a plugin instance gracefully it needs to know of
+which heap-memory segments were allocated to that instance, so they can be
+safely returned to avoid memory leaks.
+
+\subsection {Memory Alignment}
+
+Alignment + Access Size <= Compression Ratio => One check.
 
 \subsection {Heap Allocation}
 
-Mark: malloc and related functions
+Mark: malloc, related functions and API functions allocating memory for the
+plugin instance.
 
-Unmark: free
+Unmark: free, realloc, related functions, API functions for freeing memory.
 
-Allocation plus freeing.
+Allocation plus freeing. Alignments, block sizes.
 
 \subsection {Stack Allocation}
 
-Mark: Function prologue
+Mark: Stack allocation, local variables
 
-Unmark: Function epilogue
+Unmark: End of scope
 
 At first glance, a simple solution to the stack-allocation problem would be to,
 once and for all, mark each entire stack space upon thread creation to belong to
@@ -94,13 +107,5 @@ able to otherwise alter the execution stack in any manner. If such alteration
 were possible from a plugin it could, intentionally or not, smash the stack,
 introduce buffer overruns and quite easily execute return-to-libc[ref-phrack]
 attacks to break out of its own sandbox and run uninstrumented code.
-
-
-\section {Accesses across boundaries}
-
-
-\section {Memory Alignment}
-
-Alignment + Access Size <= Compression Ratio => One check.
 
 
