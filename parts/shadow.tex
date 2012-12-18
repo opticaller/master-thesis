@@ -104,25 +104,38 @@ external data.
 
 \subsection {Heap Allocation}
 
-Mark: malloc, related functions and API functions allocating memory for the
-plugin instance.
-
-Unmark: free, realloc, related functions, API functions for freeing memory.
-
 Heap-allocated memory is a resource which needs to be tracked and validated when
 sent as a parameter to free or realloc etc. A plugin instance should not be able
 to free random memory addresses, as this can cause serious memory corruption. As
 the host needs to shut down a plugin instance gracefully it needs to know of
 which heap-memory segments were allocated to that instance, so they can be
-safely returned to avoid memory leaks.
+safely returned to avoid memory leaks. The host also needs to keep track of how
+large the memory segments are, so that the corresponding call to free the memory
+can also unmark the corresponding shadow memory. This can be done by wrapping
+existing memory-allocation and memory-deallocation calls and does not require a
+custom memory allocator.
 
-An easy way to track these resources is to have a hash table
+An easy way to track these resources is to have a hash table for each plugin
+instance which maps the allocation's base address to its size. If there space is
+empty when a request to free this memory segment is performed, then the memory
+base address wasn't allocated by the plugin instance and the plugin instance
+should be aborted. When a plugin instance is shut down, then iterate through
+the hash table and free and unmark all still-allocated addresses. Optionally a
+warning concerning the memory leak could be issued as well.
 
 \subsection {Stack Allocation}
 
 Mark: Stack allocation, local variables
 
 Unmark: End of scope
+
+Stack allocation is a bit more tricky than heap allocation. With heap allocation
+every allocation and deallocation is explicit. Stack allocation however is not.
+To free stack memory, what's essentially done is moving the stack pointer.
+Anything past the stack pointer is considered garbage.
+
+TODO: resume instruction. Cover long jumps. Mark addresses corresponding to
+[stack top, old top) after the jump.
 
 At first glance, a simple solution to the stack-allocation problem would be to,
 once and for all, mark each entire stack space upon thread creation to belong to
