@@ -54,16 +54,6 @@ then only a single check in the shadow is needed. This is crucial to be able to
 provide access to basic types, such as \texttt{int}, \texttt{float} and
 \texttt{double}, with acceptable overhead.
 
-\subsection {Granularity}
-
-As memory-access is granted based on memory blocks and not individual bytes,
-memory must be handled in multiples of the compression ratio and be aligned to
-the compression ratio boundary. For a $1:8$ ratio, that means all memory
-allocation must occur in multiples of $8$ and its base address be a multiple of
-$8$. This should, of course, be invisible to the plugin and sufficient memory
-should be allocated to accomodate the requested allocation size aligned to the
-proper boundary, as well as allocating any remaining space in the final block.
-
 
 \section {Memory Management}
 
@@ -72,16 +62,45 @@ to, regardless of how it was allocated, be marked as owned by the plugin
 instance before it can being used. After the memory is no longer accessible to
 the plugin instance it needs to be unmarked.
 
-Heap-allocated memory is a resource which needs to be tracked and validated when
-sent as a parameter to free or realloc etc. A plugin instance should not be able
-to free random memory addresses, as this can cause serious memory corruption. As
-the host needs to shut down a plugin instance gracefully it needs to know of
-which heap-memory segments were allocated to that instance, so they can be
-safely returned to avoid memory leaks.
-
 \subsection {Memory Alignment}
 
-Alignment + Access Size <= Compression Ratio => One check.
+[TODO: maybe figure here, sliding window for access size]
+
+As memory-access is granted based on memory blocks and not individual bytes,
+memory must be handled in multiples of the compression ratio and be aligned to
+the compression ratio boundary. For a $1:8$ ratio, that means all memory
+allocation must occur in multiples of $8$ and its base address be a multiple of
+$8$. This should, of course, be invisible to the plugin and sufficient memory
+should be allocated to accomodate the requested allocation size aligned to the
+proper boundary, as well as allocating any remaining space in the final block as
+all of it will be marked as accessible.
+
+There is however a boundary case not accounted for in the paragraph above. When
+memory is accessed, there exists no guarantee for memory pointers to be aligned
+to their access size. A memory access within a block aligned to its access size
+rounded up to the nearest power of two will stay inside the block. A potential
+problem arises when an unaligned access at the end of a memory block occurs.
+
+Memory accesses not aligned to this boundary can easily occur. This includes
+maliciously by introducing an unaligned pointer and accidentally through
+incorrect pointer manipulation and typecasts. Whenever such an access is done,
+it may or trigger a segmentation fault on certain platforms, depending on the
+actual alignment. This is caught by the host environment. But whenever it falls
+through, it could overwrite data not owned by the plugin instance itself. We
+prefer to avoid relying on such hosting-environment-specific behavior.
+
+Our proposed solution is primarily a means of protecting the host and other
+plugins and not an error-detection tool primarily. Therefore having such a case
+go undetected is deemed ok, so long as it doesn't cause any damage. We're
+already missing some erroreous boundary accesses from always allocating a
+certain multiple of bytes. We therefore propose that, whenever memory for $n$
+blocks should be allocated, regardless of how, we allocate an additional garbage
+block. Thus we allocate $n+1$ blocks, but only mark the shadow corresponding to
+the legitimate first $n$ blocks. This way accesses spilling past the final
+block will only be able to affect the garbage block as well, and not alter any
+outside data belonging to, for instance, the memory allocator. The plugin
+instance will have behaved incorrectly, but not in a way that has altered any
+external data.
 
 \subsection {Heap Allocation}
 
@@ -90,7 +109,14 @@ plugin instance.
 
 Unmark: free, realloc, related functions, API functions for freeing memory.
 
-Allocation plus freeing. Alignments, block sizes.
+Heap-allocated memory is a resource which needs to be tracked and validated when
+sent as a parameter to free or realloc etc. A plugin instance should not be able
+to free random memory addresses, as this can cause serious memory corruption. As
+the host needs to shut down a plugin instance gracefully it needs to know of
+which heap-memory segments were allocated to that instance, so they can be
+safely returned to avoid memory leaks.
+
+An easy way to track these resources is to have a hash table
 
 \subsection {Stack Allocation}
 
