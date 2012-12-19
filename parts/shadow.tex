@@ -132,19 +132,34 @@ Unmark: End of scope
 Stack allocation is a bit more tricky than heap allocation. With heap allocation
 every allocation and deallocation is explicit. Stack allocation however is not.
 To free stack memory, what's essentially done is moving the stack pointer.
-Anything past the stack pointer is considered garbage.
-
-TODO: resume instruction. Cover long jumps. Mark addresses corresponding to
-[stack top, old top) after the jump.
+Anything past the stack pointer is considered garbage. This will however not
+automatically mark everything as freed in the shadow memory, and
+previously-allocated memory would still be marked as accessible. Which would be
+incorrect.
 
 At first glance, a simple solution to the stack-allocation problem would be to,
 once and for all, mark each entire stack space upon thread creation to belong to
 a plugin instance. Apart from forcing a 1:1 mapping between plugin instances and
-threads, this has serious security implications as well. The plugin should only
-be able to access the memory on the stack used for variables. It should not be
-able to otherwise alter the execution stack in any manner. If such alteration
-were possible from a plugin it could, intentionally or not, smash the stack,
-introduce buffer overruns and quite easily execute return-to-libc[ref-phrack]
-attacks to break out of its own sandbox and run uninstrumented code.
+threads, this has serious security implications as well. The plugin instance
+should only be able to access the memory on the stack used for variables. It
+should not be able to otherwise alter the execution stack in any manner.
 
+If such alteration were possible by a plugin instance it could, intentionally or
+not, introduce buffer overruns and quite easily smash the stack[ref-phrack] to
+break execution flow. This would definitely grant the plugin instance to break
+out to shell and execute arbitrary commands, if we allowed inline machine
+assembly to be a part of the plugin. Though we'll place restrictions on this
+later in Chapter [ref-instr], we'd rather make the potentially over-cautious
+assumption that not properly preventing writes to parts of the stack not
+allocated for local variables or spilled registers will allow uninstrumented
+arbitrary-code execution. Regardless of the bug's potential impact, a plugin
+instance would preferably shut down when attempting to perform it.
+
+TODO: How to do alloca? Replacing with malloc wouldn't help with complexity of
+the solution. Would still have to free() after.
+
+Execution flow which deviates from normal stack-based subroutine behavior will
+be handled in Chapter [chap-exception]. The same principle applies though, stack
+memory should be marked as owned by the plugin instance when and only when can
+potentially be accessed by the plugin instance.
 
