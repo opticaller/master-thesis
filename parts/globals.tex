@@ -1,7 +1,20 @@
-\chapter {Eliminating Globals}
+\chapter {Eliminating Global Variables}
 
-Naturally, globals can't be shared directly when every piece of memory is owned
-by a process.
+The proposed solution implies that every single piece of memory is owned by a
+single plugin instance. Inherently, globals, as every other piece of memory, can
+not be shared between instances. As globals are naturally shared between every
+thread in a running program, this constitutes a problem that needs to be solved
+if global variables are to be accessible at all.
+
+In this chapter, we describe a few very different solutions to the problem.
+Their applicability is highly context-dependent, the specific solution should be
+chosen after taking several factors into account. For the initial implementation
+done for Rack Extensions, we decided to go with only instrumenting storing
+instructions. For plugin-instance-isolation reasons non-constant globals were
+already forbidden. There was no sensitive data which needed protection, and
+Rack-Extension developers are trusted not to do anything malicious on purpose.
+Instrumenting only storing instructions also significantly decreased overhead
+both on code size and running speed.
 
 
 \section {Read-Only?}
@@ -10,7 +23,7 @@ Loads not modified => globals can be shared. They're still write-protected from
 instructions writing to memory.
 
 
-\section {Global Inits}
+\section {Global Constructors}
 
 blah blah problems with int foo = getch() in C++. Not allowed in C, so in C
 there's no problem.
