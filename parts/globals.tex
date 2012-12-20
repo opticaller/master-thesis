@@ -60,19 +60,71 @@ performed once. In this final case, it's appropriate to put the globals in a
 struct like described above in Section [ref-shared-globals].
 
 
-\section {Global Constructors}
+\section {Instance-Local ``Globals''}
 
-blah blah problems with int foo = getch() in C++. Not allowed in C, so in C
-there's no problem.
+One solution to the globals problem is easy to think of: Give each plugin
+instance its own local copy. If there are no global variables at runtime then
+there is no problem left to solve. This allows every plugin instance to be as
+isolated as possible while not enforcing read-only restrictions etc. on global
+variables. Out of simplicity, the globals are assumed to be repacked into a
+struct, which is somehow set up for the different instances. This simplifies an
+explanation of the model, and it's easier to not have the globals segmented
+either way.
 
-Can also disallow global\_ctors.
+As arbitrary global values can include pointers to other global variables
+copying them to the rest of the plugin instances after they've been initialized
+once is not valid in the general case, because the new set of globals will
+potentially be pointing back to the old global struct. It's possible to track
+properly typed pointers and translate them between blocks if they are pointing
+to inside the globals struct. It's not covering all cases, it's not invalid to
+have pointers pointing just outside the area, or even storing them typecast into
+non-pointer types such as \texttt{intptr\_t} in C99. Furthermore, any pointers
+pointing to memory that has been dynamically allocated would belong to the
+previous instance and that pointer would also be invalid to access after
+copying.
 
-Can also say they're not allowed to access external function calls. This way
-they can only be assigned data based on the struct. Modify init-calls as well
-to use thread-local struct.
+The solution we suggest for having instance-local globals is to instrument the
+global constructors of a plugin to operate on an instance-local struct. These
+global constructors would then not run on initialization of a plugin, but rather
+on initialization of a plugin instance. There are some corner cases regarding
+non-pure constructors which will be discussed here under Section [ref-non-pure].
 
+We would also like to have investigated the possibility of instrumenting the
+code to dereference a pointer to a globals struct instead. This way we could
+have transferred the plugin instance between threads by simply passing the
+pointer to the plugin instance's globals. This type of instrumentation seemed
+unsupported by the LLVM API at the time of writing, and the effort was
+subsequently dropped.
 
-\section {Thread-Pool Problems}
+\subsection {Thread-Local Globals}
 
-Yay. :(
+Making the global-struct thread local is a simple solution. The struct can
+however not be moved around, for the same reasons why a struct cannot simply be
+copied mentioned above. So having this struct thread-local would force that no
+more than a single instance of a plugin runs on a thread, and that no plugin
+instance runs concurrently on multiple threads. This would be suitable for a
+$1:1$ mapping between threads and plugin instances.
+
+\subsection {Impure Global Constructors}
+
+When global functions are not pure, there are some corner cases in which a
+plugin instance would behave badly. There are cases where impure functions can
+be run from a globals perspective without having problems.
+\texttt{int x = rand();} is a fine example, even though the plugin instances
+receive different values for x, they shouldn't have been expecting any
+particular values for x, just something ``random'', which will still apply for
+each single instance. Memory allocated through \texttt{malloc} will also be
+fine, as every instance is expecting a memory block of a certain size, and not
+a particular pointer value.
+
+A constructed example would be expecting the first line of input from a stream,
+for instance, stdin: \texttt{std::string x = std::cin.getline();}. In this case
+the plugin instances would receive different lines, they would all be expecting
+the first line of input. This would give a nasty bug that's hard to track down.
+
+We propose providing an API in which the plugin instances don't have access to
+impure functions with unwanted side effects. A plugin shouldn't in general have
+to get the first line of input directly from stdin. Instead stdin could be
+logged so that requesting the first line of stdin would be both indempotent,
+always returning the same thing, as well as more explicit.
 
