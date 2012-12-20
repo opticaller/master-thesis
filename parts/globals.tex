@@ -4,7 +4,8 @@ The proposed solution implies that every single piece of memory is owned by a
 single plugin instance. Inherently, globals, as every other piece of memory, can
 not be shared between instances. As globals are naturally shared between every
 thread in a running program, this constitutes a problem that needs to be solved
-if global variables are to be accessible at all.
+if global variables are to be accessible at all. Though it's possible in some
+cases to track usage of a variable back to 
 
 In this chapter, we describe a few very different solutions to the problem.
 Their applicability is highly context-dependent, the specific solution should be
@@ -17,10 +18,46 @@ Instrumenting only storing instructions also significantly decreased overhead
 both on code size and running speed.
 
 
-\section {Read-Only?}
+\section {Shared Globals}
 
-Loads not modified => globals can be shared. They're still write-protected from
-instructions writing to memory.
+If memory access is only separated based on their plugin class and not their
+assigned plugin-instance ids then the globals problem becomes a bit easier.
+Globals have to be marked before they are used. One problem arises however, as
+with memory allocation we require another block past the end of usable memory to
+be allocated as well.
+
+This can be solved by putting all globals inside a struct and replacing usage of
+them with their in-struct counterpart. Finally, add an additional memory block
+to the struct and add alignment up to block size. Have this struct be aligned to
+memory block size or largest alignment inside the struct, whichever is larger.
+We would like to note that after this step is done, no transformations which
+will alter this struct, such as scalar replacement of aggregates[ref] can be
+run.
+
+Note that in LLVM alignment inside non-packed structures are based on what the
+underlying code generator expects[ref]. If global variables require different
+alignment, then putting globals aligned into such a struct would require further
+work and investigation. We however expect this case to be fairly uncommon.
+
+\subsection {Read-Only Globals}
+
+Only instrumenting store instructions and making globals read-only by policy is
+by far the simplest solution to the global-variable problem. All reads are
+naturally accepted, and all writes are naturally rejected, as the global
+variables are not marked as accessible by anyone.
+
+This policy conflicts with global variables initialized through global
+constructors. In C a global variable can only take a value, whereas in C++ and
+other languages they can be initialized through arbitrary function calls which
+gets executed before main.
+
+We see two simple solutions to this problem when using read-only globals: Either
+trust the global constructors and leave them uninstrumented, which is very
+naive, as it's essentially allowing uninstrumented arbitrary-code execution, or
+enforce the policy that globals really can not be written to. A third solution
+would be marking them as accessible during initialization, as it is only
+performed once. In this final case, it's appropriate to put the globals in a
+struct like described above in Section [ref-shared-globals].
 
 
 \section {Global Constructors}
