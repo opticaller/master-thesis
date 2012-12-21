@@ -5,7 +5,29 @@
 \usepackage[utf8]{inputenc}
 \usepackage[swedish,english]{babel}
 \usepackage[hidelinks]{hyperref}
-\usepackage {xjobb/modifications}
+\usepackage{xjobb/modifications}
+\usepackage{lstlisting-llvm}
+\usepackage{xcolor}
+\lstset{
+    inputencoding=utf8,
+    tabsize=2,
+%    rulecolor=,
+    upquote=true,
+    columns=fixed,
+    breaklines=true,
+%    prebreak=
+    backgroundcolor=\color[rgb]{0.96,0.96,0.96},
+    frame=single,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    basicstyle=\scriptsize\ttfamily,
+    identifierstyle=\ttfamily,
+    keywordstyle=\ttfamily\color{purple},
+    commentstyle=\ttfamily\color[rgb]{0.778, 0.724, 0.258},
+    stringstyle=\ttfamily\color[rgb]{0.283, 0.267, 0.618},
+}
+
 \title {TODO: Real-Time Isolation of Native Thread-Based Extensions}
 
 \subtitle {TODO: Confinement of Thread-Based Extensions using LLVM}
