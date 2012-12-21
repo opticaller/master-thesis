@@ -22,9 +22,8 @@ both on code size and running speed.
 
 If memory access is only separated based on their plugin class and not their
 assigned plugin-instance ids then the globals problem becomes a bit easier.
-Globals have to be marked before they are used. One problem arises however, as
-with memory allocation we require another block past the end of usable memory to
-be allocated as well.
+Globals have to be marked before they are used. As with memory allocation
+another block past the end of usable memory is required as well.
 
 This can be solved by putting all globals inside a struct and replacing usage of
 them with their in-struct counterpart. Finally, add an additional memory block
@@ -37,7 +36,8 @@ run.
 Note that in LLVM alignment inside non-packed structures are based on what the
 underlying code generator expects[ref]. If global variables require different
 alignment, then putting globals aligned into such a struct would require further
-work and investigation. We however expect this case to be fairly uncommon.
+work and investigation. We however expect this requirement to be fairly
+uncommon.
 
 \subsection {Read-Only Globals}
 
