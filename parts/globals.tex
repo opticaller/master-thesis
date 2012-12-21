@@ -117,14 +117,16 @@ each single instance. Memory allocated through \texttt{malloc} will also be
 fine, as every instance is expecting a memory block of a certain size, and not
 a particular pointer value.
 
-A constructed example would be expecting the first line of input from a stream,
-for instance, stdin: \texttt{std::string x = std::cin.getline();}. In this case
-the plugin instances would receive different lines, they would all be expecting
-the first line of input. This would give a nasty bug that's hard to track down.
+A constructed example would be expecting the first character of input from a
+stream, for instance, stdin: \texttt{int x = std::cin.get();}. In this case the
+plugin instances would all receive different characters, they would all be
+expecting the first line of input. This would leave a nasty bug that's hard to
+track down.
 
 We propose providing an API in which the plugin instances don't have access to
 impure functions with unwanted side effects. A plugin shouldn't in general have
-to get the first line of input directly from stdin. Instead stdin could be
-logged so that requesting the first line of stdin would be both indempotent,
-always returning the same thing, as well as more explicit.
+to get the first line of input directly from stdin. In the example stdin could
+have been logged by the host and an API function provided to receive the first
+character of stdin directly. This usage would be less error prone, and all
+instances would receive what they were expecting.
 
