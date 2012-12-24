@@ -1,23 +1,37 @@
 \chapter {Function Calls}
 
-In order for extensions to actually be useful, it needs to communicate with
-either the host or the outside world through some API or library calls.
+In order for a plugin to actually be useful, it needs to communicate with
+the host environment through some API.
+
+Apart from utility functions like algorithms and utility functions external
+function calls constitutes an ability for the plugin to communicate with its
+host. Without any external function calls (or inline assembly of these
+functions, which we strongly suggest forbidding in Chapter[ref-instr]) no
+communication back to the host environment can be initiated by the plugin.
+Though plugins could technically be driven entirely with callbacks, unless the
+plugins are limited to performing very specific tasks, we find this highly
+impractical.
 
 
-\section {Whitelist/Blacklist Policy}
-
-
-\section {Function Pointers}
-
-
-\section {Runtime Library}
+\section {External Functions}
 
 Potential for different sets of functions, depending on what the user or other
-settings have specified.
+settings have specified. Similar to Android's access levels. In some way.
 
-Principle of least privilige.
+\subsection {Whitelist Policy}
+
+External function calls need to be allowed or disallowed based on a whitelist
+policy.
+
+Principle of least privilige. (Does not apply to pure functions like sin())
+
+The hosting environment can't 
 
 \subsection {Host Extension API}
 
 \subsection {Standard Libraries}
+
+
+\section {Function Pointers}
+
 
