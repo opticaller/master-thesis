@@ -58,18 +58,32 @@ model could be desirable for plugins as well.
 
 APM: \url{http://source.android.com/tech/security/index.html#the-android-permission-model-accessing-protected-apis}
 
-Rack Extensions serve a very limited purpose, so our implementation did not
+Rack Extensions serve a very limited purpose, and our implementation did not
 involve an any access sets. All of these plugins' access to external functions
 is very limited as it is.
 
 \subsection {Whitelist Policy}
 
 External function calls need to be explicitly allowed based on a whitelist
-policy. Blacklisting all functions which can not be 
+policy. Blacklisting all disallowed functions seems a daunting task, and
+potentially very error prone. If a plugin were to be linked against several
+libraries not under control by the host, extensive research and effort would
+have to be put forth against providing blacklists for every single one of them
+with unintentional side effects. Another point towards infeasibility is that the
+library version on the user's system might be a completely different one from
+which the blacklist was developed against. New functions or changed function
+behaviour could also have been introduced between versions, which could leave
+the blacklist worthless.
 
-Principle of least privilige. (Does not apply to pure functions like sin())
-
-The hosting environment can't 
+Whitelisting however allows much easier introduction of a model following the
+principle of least privilege. Apart from common standard utility functions and
+other convenience functions, the host remains in tight control of what
+potentially dangerous functions the plugin is allowed to call. For many
+functions with side effect, a wrapper function or a modified implementation
+needs to be introduced instead. All arguments needs to be sanity checked and
+provide a graceful abort when the arguments are invalid, as external function
+calls are executed outside the protection domain. This would require a blacklist
+to basically blacklist all functions with potentially malicious side effects.
 
 \subsection {Host Extension API}
 
