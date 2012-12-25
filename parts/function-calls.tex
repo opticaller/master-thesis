@@ -36,8 +36,31 @@ Though plugins could technically be driven entirely with callbacks, unless the
 plugins are limited to performing very specific tasks, we find this highly
 impractical.
 
-Potential for different sets of functions, depending on what the user or other
-settings have specified. Similar to Android's access levels. In some way.
+\subsection {Access Sets}
+
+Access control to external functions for plugins doesn't have to be simply `all'
+or `nothing'. Providing sets of external functions to plugins would allow an
+user to select what it trusts a plugin to do; for instance, a plugin for
+importing a certain file format could be allowed to read files, but not be
+granted network access, while a RSS-reading plugin could be granted network
+access, but not allowed to access local files. This granularity allows the user
+to both be and feel more secure when running plugins, as they would need
+explicit permission to use a certain set of resources.
+
+The reader might be familiar with the Android operating system, where the
+Android Permission Model[ref] restricts access to a few APIs such as camera
+functions, storage and network/data connections. An user grants permissions to
+these when installing an application: ``Prior to installation of any
+application, the user is shown a clear message about the different permissions
+the application is requesting. After install, the user is not prompted again to
+confirm any permissions.'' Depending on the context where it's used, a similar
+model could be desirable for plugins as well.
+
+APM: \url{http://source.android.com/tech/security/index.html#the-android-permission-model-accessing-protected-apis}
+
+Rack Extensions serve a very limited purpose, so our implementation did not
+involve an any access sets. All of these plugins' access to external functions
+is very limited as it is.
 
 \subsection {Whitelist Policy}
 
