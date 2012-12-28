@@ -85,11 +85,6 @@ provide a graceful abort when the arguments are invalid, as external function
 calls are executed outside the protection domain. This would require a blacklist
 to basically blacklist all functions with potentially malicious side effects.
 
-\subsection {Host-Extension API}
-
-TODO: Enough documentation of the Rack Extension API to desribe the point, but
-not enough to leak trade secrets.
-
 \subsection {Standard Libraries}
 
 Modern programming-language standard-libraries typically consists of algorithms,
@@ -134,6 +129,20 @@ block size is large as well, say $512$ bytes, then an external function which
 checks its indata could perform $2-3$ checks in the shadow memory for each
 parameter instead of every memory access. (It should also validate that the
 memory segments do not overlap, for which \texttt{memmove} should be used.)
+
+\subsection {Host-Extension API}
+
+The host-extension API should define a set of datatypes and functions to enable
+intercommunication and possibly also provide domain-specific utility functions.
+The former is required in order to request/recieve data and events from and to
+the host. The latter provides functions and datatypes for reducing development
+time and limiting bugs in the plugin, similar to language standard libraries.
+Providing common functions, especially non-trivial ones, can greatly help the
+overall quality of the host-platform plugins.
+
+TODO: Enough documentation of the Rack Extension API to describe the point, but
+not enough to leak trade secrets. Domain-specific functions could be fourier
+transform, etc.
 
 
 \section {Indirect Calls}
