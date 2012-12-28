@@ -85,13 +85,55 @@ provide a graceful abort when the arguments are invalid, as external function
 calls are executed outside the protection domain. This would require a blacklist
 to basically blacklist all functions with potentially malicious side effects.
 
-\subsection {Host Extension API}
+\subsection {Host-Extension API}
 
 TODO: Enough documentation of the Rack Extension API to desribe the point, but
 not enough to leak trade secrets.
 
 \subsection {Standard Libraries}
 
+Modern programming-language standard-libraries typically consists of algorithms,
+such as sorting lists or math functions, data structures, such as lists, trees,
+and maps and interaction with the host platform including input/output and
+operating system calls. Typically, we only wish to restrict the latter. Standard
+algorithms and data structures are only tools to make program development easier
+and more reliable, as implementing all needed data structures and algorithms per
+project from scratch can be hard, error-prone and time-consuming.
+
+Pure functions which are defined on all input data, such as \texttt{sin} for
+real numbers, can be whitelisted without hesitation. As they have no side
+effects on any input, the plugin should be allowed to call them at its
+convenience. Permissible functions not defined on the entire input domain need
+to have their arguments validated. We expect this much of the undefined behavior
+to be regarding accessing memory which the plugin, or program, does not own.
+This checking addresses both crashes on accessing unallocated memory as well as
+prevention of accesses by a plugin instance to memory owned by the host or other
+plugin instances.
+
+In unprotected languages, such as C or C++, many standard-library functions are
+defined to have undefined behavior when fed with garbage data. \texttt{free} for
+instance, has undefined behavior when trying to free some data which hasn't been
+previously allocated by \texttt{malloc}, \texttt{calloc}, \texttt{realloc}. For
+functions provided to the plugin, we want to provide an implementation where
+this undefined behavior is redefined to abort the plugin.
+
+For many functions, undefined behavior is introduced by function calls which
+attempt to read or write to memory which it doesn't own. For such calls, 
+statically compiling the function into the plugin before code instrumentation
+occurs would address this issue, as the library code would also be instrumented.
+It would however prevent a compiled LLVM module from being linked to a newer
+version of the standard library function, for instance if a bug would have been
+found.
+
+External function calls that are trusted can also be more sparse with memory
+checking. \texttt{memcpy}, for instance, can check the shadow memory for what's
+actually being copied once, instead of once every read or store. If the
+implementation were to copy $1024$ bytes individually, this means $1024$ checks
+against shadow memory both for the source and destination. If the shadow memory
+block size is large as well, say $512$ bytes, then an external function which
+checks its indata could perform $2-3$ checks in the shadow memory for each
+parameter instead of every memory access. (It should also validate that the
+memory segments do not overlap, for which \texttt{memmove} should be used.)
 
 
 \section {Indirect Calls}
