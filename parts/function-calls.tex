@@ -87,9 +87,55 @@ to basically blacklist all functions with potentially malicious side effects.
 
 \subsection {Host Extension API}
 
+TODO: Enough documentation of the Rack Extension API to desribe the point, but
+not enough to leak trade secrets.
+
 \subsection {Standard Libraries}
 
 
-\section {Function Pointers}
 
+\section {Indirect Calls}
 
+Instead of calling a function directly through a fixed name, a function pointer
+can be dereferenced and then invoked like a regular function call. The
+difference however is that a named function call will refer always refer to a
+function, while a function pointer can be dereferenced to call an arbitrary
+address, potentially not containing any function at all. If locations of
+restricted functions inside linked libraries can somehow be determined, a
+function pointer could be referring to a function which the plugin is not
+permitted to call.
+
+<LLVM asm for indirect function call, include getting addr of function>
+
+Dereferencing and calling this function pointer would constitute a valid
+function call to a forbidden function. The plugin would then have at least
+partially broken out of its sandbox. Therefore any indirect calls have to be
+validated prior to actual execution. Just like any memory accesses are to be
+validated prior to \texttt{load}s and \texttt{store}s, etc.
+
+Named function calls however do not have to be instrumented, they can directly
+be permitted or rejected. If the call refers to a function inside the plugin or
+a whitelisted external function, it's permitted, otherwise it's rejected.
+
+<LLVM asm for direct function call>
+
+<LLVM asm for direct function call to exec, forbidden>
+
+To validate a function call, it's easiest to construct a lookup table, such as a
+hash set, and fill it with all function addresses which the plugin is actually
+allowed to call. This should consist of the plugin's own functions as well as
+external functions which the plugin is permitted to use. Then prior to any
+indirect function calls, validate that the function pointer actually points to a
+valid address.
+
+For typesafe matching, one lookup table per function type should be built and
+specifically used when such a call is being dereferenced rather than one global.
+We aren't aware of any ABIs or code generators which produce code where an
+incorrect number or size of ingoing parameters actually passed could smash the
+stack or otherwise affect a callee's ability to return properly. Such
+environments would require typesafe matching to not mess up control flow.
+
+In other cases an incorrect, or specifically smaller size of ingoing parameters
+data would cause the subroutine to read garbage. This is however comparable to
+maliciously passing garbage data, and as all external functions called have to
+validate indata, this is already protected against.
