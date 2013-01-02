@@ -84,13 +84,13 @@ declare i32 @puts(i8* nocapture) nounwind
 \caption{A ``Hello World'' program compiled by Clang to a LLVM Module}
 \end{figure}
 
-LLVM programs consists of Modules[ref-lang]. A Module normally corresponds to a
-translation unit of the compiler. It can contain functions, external
-declarations, global variables and symbol-table entries. It also contains
-information about the target target compiled to. The datalayout string contains
-information about the target, such as endianness, data-type sizes and alignment.
-The example target triple tells us that the target is a GNU environment on Linux
-running on an x86-64 architecture.
+\noindent LLVM programs consists of Modules[ref-lang]. A Module normally
+corresponds to a translation unit of the compiler. It can contain functions,
+external declarations, global variables and symbol-table entries. It also
+contains information about the target target compiled to. The datalayout string
+contains information about the target, such as endianness, data-type sizes and
+alignment. The example target triple tells us that the target is a GNU
+environment on Linux running on an x86-64 architecture.
 
 These Modules can be linked together using the LLVM linker into a single Module.
 For the purpose of this thesis a plugin will be treated as a single Module. That
@@ -122,23 +122,34 @@ pseudo-registers instead. Explicit memory accesses could recide anywhere in
 memory, unlike pseudo-registers, which are either spilled onto the stack or kept
 inside actual processor registers.
 
-\subsection {Read/Write Instrumentation}
+\subsection {\texttt{alloca}}
 
-Either reads, writes to memory are interesting operations, or both. This is
-entirely depending on the level of protection wanted, it's important to take
-into account what kind of data the host protects, and quite possibly also what
-other plugins could protect. A plugin which provides a PGP encryption feature to
-an email client would likely, at some point in time, store a secret encryption
-key in memory. This should not definitely not be readable by other plugins as it
-would allow them to potentially leak the key.
+\subsection {\texttt{load} and \texttt{store}}
 
-Instrumenting memory accesses give quite some overhead however. A program which
-doesn't have to protect its own data, or need to provide similar guarantees to
-plugins can choose only to instrument writing instructions. This way a plugin
-can potentially read all data inside the running application, but it can not
-change any of it. This is still useful for preventing system instability which
-can be caused by a plugin invalidating the host's, or other plugins' running
-state.
+\begin{figure}[ht]
+\begin{lstlisting}[language=llvm]
+store i32 3, i32* %ptr                          ; stores 3 to *ptr
+%val = load i32* %ptr                           ; yields val = *ptr
+\end{lstlisting}
+\caption{The LLVM \texttt{load} and \texttt{store} instructions}
+\end{figure}
+
+\noindent Reads from and writes to memory are interesting operations. In some
+circumstances only write protection is required. This depends entirely on
+protection requirements imposed by the host environment, it's important to
+account for what kind of data the host protects, and quite possibly also what
+other plugins could protect. A plugin which provides a PGP[footnote-about-pgp]
+encryption feature to an email client would likely, at some point in time, store
+a secret encryption key in memory. Its state should definitely not be readable
+by other plugins which would otherwise potentially be able to leak the key.
+
+Instrumenting memory accesses give quite some overhead however. A host which
+neither needs to protect its internal state from being read nor provide such
+guarantees to plugins inside its environment can choose to instrument only
+instructions which write to memory. This way a plugin can potentially read all
+data inside the running application, but it can not change any of it. This is
+still required to prevent system instability caused by a plugin modifying the
+host or another plugin's state.
 
 Rack Extensions are such plugins, no really sensitive data is kept in the host,
 and as users want to pack as many instruments as possible into the application,
