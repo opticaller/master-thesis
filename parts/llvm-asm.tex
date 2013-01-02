@@ -39,8 +39,17 @@ also read and write to memory, so any instructions added to the language must
 also be inspected (or explicitly forbidden). To detect any new instructions that
 have to be considered, it's possible to have a compiler pass which explicitly
 whitelists instructions, so that any unexpected instructions would cause
-compilation to abort. Currently, at the moment of writing the current LLVM
-version is $3.2$.
+compilation to abort. From a security standpoint, whitelisting instructions
+explicitly is crucial to ensure that a new instruction doesn't go unnoticed.
+
+We purposefully do not attempt to provide a complete list of instructions and
+whether they require instrumentation or not. As a rule of thumb, instructions
+which only operate directly on local registers do not require instrumentation as
+they're local to the plugin instance running a particular function. Instructions
+with side effects outside of local registers need to be further examined.
+\texttt{load} is such an instruction, while it takes a local register as input,
+it dereferences the value as an address to read from the arbitrary location
+determined by its input.
 
 
 \section {Modules}
