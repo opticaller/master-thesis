@@ -82,23 +82,32 @@ Stuff.
 
 \section {Per-Instance Address Spaces}
 
-Though not part of our final solution to memory protection, we'd like to mention
-another even more coarse-grained error-detection technique considered before
-finding AddressSanitizer, and why it was ultimately discarded even before
-finding the AddressSanitizer pass and paper.
+For a broader coverage of of the process and for flavor, we'd like to mention
+another even more coarse-grained error-detection technique along with its flaws
+which was considered before AddressSanitizer was recommended to us, and why the
+solution was ultimately discarded even before we heard of AddressSanitizer.
 
-TODO: More text here. And fix the following paragraphs.. Still requires
-instrumentation, asan better.
+Placing each plugin instance's stack and heap into its own continuous address
+space allows for a single coarse-grained check against start and end address. By
+allocating a continous segment as a power of two, this can be done efficiently
+by masking the memory address to get its base address.
 
-Placing each extension's stack and heap into its own continuous address space
-allows for a single coarse-grained check against start and end address. On
-32-bit platforms virtual address space is limited however, and if there's no
-good estimate on how much memory an extension will use, the extension might
-either have too much space allocated and the program's total address space
-might run out when using too many extensions.
+On 32-bit platforms virtual address space is limited however, and if there's no
+good estimate on how much memory a plugin instance will use, the instance might
+either have too much space allocated and the host's total address space
+might run out when using too many extensions. Also, if the address space for an
+extension runs out, it can't allocate more memory.
 
-On the other hand, if the address space for an extension runs out, it can't
-allocate more memory. Moving an extension's address space would however require
-translating every pointer pointing to the block itself as well.
+Worst of all is possibly the false sense of security this solution imposes when
+attempting to protect against malicious plugins, or malicious input to them
+through bugs. As the stack recides inside the instance's address space, it means
+that all of the stack can be written to. However, the only part a a plugin
+instance should be able to modify freely are local stack variables. Other data
+such as return addresses need to be preserved in order to preserve control flow.
 
-TODO: Downsides, doesn't protect stack, return addresses etc.
+Failure to protect return addresses can lead to a buffer overflow causing the
+plugin to return to uninstrumented code by smashing the stack. Existing software
+vulnerable to such exploits are quite commonly found. The attack itself is well
+explained by  [phrack-pseudonym, ref]. A program which \emph{intentionally}
+exposes itself to such vulnerabilities or performs such an attack upon itself is
+even easier to write.
