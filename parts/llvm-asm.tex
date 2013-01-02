@@ -122,7 +122,34 @@ pseudo-registers instead. Explicit memory accesses could recide anywhere in
 memory, unlike pseudo-registers, which are either spilled onto the stack or kept
 inside actual processor registers.
 
-\subsection {\texttt{alloca}}
+\subsection {Stack Allocation: \texttt{alloca}}
+
+\begin{figure}[ht]
+\begin{lstlisting}[language=llvm]
+%ptr = alloca i32                               ; yields {i32*}:ptr
+\end{lstlisting}
+\caption{Stack allocation of a 32-bit integer in LLVM}
+\end{figure}
+
+\noindent Stack allocation in LLVM is done using the \texttt{alloca}
+instruction. These instructions are interesting as well, they allocate new
+memory which can be read to or written later. As the thesis proposes a solution
+using shadow memory to look up whether some memory is accessible or not, stack
+allocated memory has to be marked as accessible before it can be used by the
+plugin.
+
+Allocating memory on the stack is a technically simple operation, by moving the
+\emph{stack pointer}, the stack either grows or shrinks, depending on the
+direction which it moves in. Therefore, freeing all stack-allocated variables
+from inside a function is done automatically when a function returns, and the
+stack pointer is moved to remove the top frame from the stack. Unlike
+stack-allocated memory however, the corresponding shadow-map entity is not
+automatically removed when a function returns however.
+
+We addressed this by prepending all instructions which cause a function to
+return with code to remove the shadow-map entities corresponding to the
+stack-allocated memory segments. The procedure for doing this will explained
+further in Chapter [ref].
 
 \subsection {\texttt{load} and \texttt{store}}
 
@@ -179,26 +206,3 @@ free'd by another running while the plugin instance is using it. That is, it
 will not permission to use a chunk of memory between passing a check to permit a
 memory access and performing the actual memory access. In this scenario, memory
 checks appear to be atomically performed together with the write instruction.
-
-\subsection {\texttt{load}}
-
-TODO: Just inline these into above sections? Or break out the r/w
-instrumentation into an own section?
--- Read/Write? Read.
-
-And why
-
-how should they be handled?
-
-Size of operand etc.?
-
-\subsection {\texttt{store}}
-
--- Read/Write? Write.
-
-\subsection {\texttt{llvm.memcpy}}
-
--- Read/Write? Both.
-
-\subsection {\texttt{bah}}
-
