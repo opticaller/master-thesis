@@ -12,17 +12,20 @@ hosting application. [can I get a quote? examples?]
 Most plugins however only need to be able to access a few very specific
 functions in a certain API to perform their work and to communicate back to the
 hosting process. They might not need to write files to disk, or read an user's
-private data. Following the principle of least privilige[?], plugins should only
-be allowed to use as much, or as little, that they actually require to perform
-their tasks. An example where where programs explicitly request access to
-resources are Android applications, where at least a few resources, such as
-network access have to be explicitly requested upon installation. The user can
-then decide whether they trust the program to use those specific resources or
-not.
+private data. Following the principle of least privilige\footnote{\emph{``Every
+program and every privileged user of the system should operate using the least
+amount of privilege necessary to complete the job.''} -- Jerome Saltzer,
+\emph{Protection and the control of information sharing in multics}, 1974.},
+plugins should only be allowed to use as much, or as little, that they actually
+require to perform their tasks. An example where where programs explicitly
+request access to resources are Android applications, where at least a few
+resources, such as network access have to be explicitly requested upon
+installation. The user can then decide whether they trust the program to use
+those specific resources or not.
 
 Sandboxing is a security mechanism for running untrusted programs (or plugins)
 safely. A good sandbox provides a restricted set of resources that the code is
-allowed to use. A few solutions to the sandboxing problem involve either
+allowed to access. A few solutions to the sandboxing problem involve either
 limiting the plugin to use a scripting language using a specific API, or running
 each plugin in a separate process using operating-system specific features for
 lowering their priviliges and restricting their potential impact.
@@ -41,10 +44,10 @@ instances of these synthesizers as possible.
 For such extreme performance requirements, even being at the mercy of the OS
 scheduler was not an option. Any premature context switches, or even a high 
 number of optimal context switches are detrimental to performance. Inter-process
-communication (IPC) comes in a lot of flavors; files, sockets and shared memory,
-etc. all with some kind of varying overhead in addition to context switches
-between the processes. With a thread-pool-driven solution, the host itself can
-schedule their own plugins with minimal overhead.
+communication (IPC) comes in a lot of flavors; files, sockets shared memory,
+etc. all with varying overhead in addition to context switches between the
+processes. With a thread-pool-driven solution, the host itself can schedule
+their own plugins and communicate with minimal overhead.
 
 In this thesis we suggest a compiler-pass-based approach to sandboxing these
 plugins, and mitigating most problems. We aim to describe the problems as broad
