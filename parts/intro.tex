@@ -7,23 +7,22 @@ malicious and wreak havoc on an user's system when running unrestricted code. It
 is not uncommon that a plugin runs native code with the same privileges as the
 hosting application. [can I get a quote? examples?]
 
-Very often, this is not required. Most plugins only need to be able to access
-a few functions in a certain API to perform their work and communicate back to
-the hosting process. They might not need to write files to disk, or read an
-user's private data. This is where sandboxing comes in. Sandboxing is a security
-mechanism for running untrusted programs (or plugins) safely. A good sandbox
-provides a restricted set of resources that the code is allowed to use.
+Most plugins however only need to be able to access a few very specific
+functions in a certain API to perform their work and to communicate back to the
+hosting process. They might not need to write files to disk, or read an user's
+private data. Following the principle of least privilige[?], plugins should only
+be allowed to use as much, or as little, that they actually require to perform
+their tasks. An example where where programs explicitly request access to
+resources are Android applications, where at least a few resources, such as
+network access have to be explicitly requested upon installation. The user can
+then decide whether they trust the program to use those specific resources or
+not.
 
-Following the principle of least privilige[?], plugins should only be allowed to
-use as much, or as little, that they actually require to perform their tasks.
-An example where where programs explicitly request access to resources are
-Android applications, where at least a few resources, such as network access
-have to be explicitly requested upon installation. The user can then decide
-whether they trust the program to use those specific resources or not.
-
-A few solutions to the sandboxing problem involve either limiting the plugin to
-use a scripting language using a specific API, or running each plugin in a
-separate process, and using operating-system specific sandboxing features for
+Sandboxing is a security mechanism for running untrusted programs (or plugins)
+safely. A good sandbox provides a restricted set of resources that the code is
+allowed to use. A few solutions to the sandboxing problem involve either
+limiting the plugin to use a scripting language using a specific API, or running
+each plugin in a separate process using operating-system specific features for
 lowering their priviliges and restricting their potential impact.
 
 Communication between processes and just having separate processes can introduce
@@ -38,12 +37,12 @@ crackling sound. Minimizing any overhead is crucial to be able to run as many
 instances of these synthesizers as possible.
 
 For such extreme performance requirements, even being at the mercy of the OS
-scheduler have been determined not to be an option. Any premature context
-switches, or even a high  number of optimal context switches are detrimental to
-performance. Inter-process communication (IPC) comes in a lot of flavors; files,
-sockets and shared memory, etc. all with some kind of varying overhead in
-addition to context switches between the processes. With a thread-pool-driven
-solution, the host itself can schedule their own plugins with minimal overhead.
+scheduler was not an option. Any premature context switches, or even a high 
+number of optimal context switches are detrimental to performance. Inter-process
+communication (IPC) comes in a lot of flavors; files, sockets and shared memory,
+etc. all with some kind of varying overhead in addition to context switches
+between the processes. With a thread-pool-driven solution, the host itself can
+schedule their own plugins with minimal overhead.
 
 In this thesis we suggest a compiler-pass-based approach to sandboxing these
 plugins, and mitigating most problems. We aim to describe the problems as broad
