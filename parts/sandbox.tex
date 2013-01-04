@@ -1,45 +1,83 @@
 \chapter {Sandboxing}
 
-To limit what an extension or another piece of program can do, restrictions
-must be imposed on code actually running on a system. Programs in general
-should not interfere with each other's execution. Neither should they be able
-to read each other's data. It is also common to restrict which processes are
-able to make system calls and restrict access to other resources, such as files
-etc. Enforcing file-system permissions, superuser privileges etc. are
-responsibilities of the kernel.
+In order to limit what an extension or another piece of program can do,
+restrictions must be imposed on code actually running on a system. Programs in
+general should not interfere with each other's execution. Neither should they be
+able to read or write each other's memory. It is also common to restrict which
+processes are able to make system calls and restrict access to other resources,
+such as files etc. Isolation of processes, enforcement of file-system
+permissions, restricting resources to users with superuser privileges etc. are
+responsibilities of the kernel with help from hardware, such as the
+memory-management unit (MMU).
 
-Ideally the same principles would apply for extensions. A program is generally
-trusted to run code with its user's privileges, but extensions are expected to
-only access to the resources they require to perform their specific task.
-Ideally an extension should only be isolated from its environment and only be
-able to access resources which it's permitted to use.
+Ideally the same principles should apply for extensions as well. A program is
+generally trusted to run code with its user's privileges, but extensions are
+expected to only access to the resources they require to perform their specific
+task. Ideally an extension would not inherit the privileges from its hosting
+environment, but rather only be able to access resources which it's been
+permitted to use.
 
 
 \section {Memory Accesses}
 
 A program should in general not be able to read from or write to another
-program's memory. Not properly protecting programs can for instance result in
+program's memory. Not properly protecting programs can, for instance, result in
 sensitive data, such as cryptographic keys or passwords in memory leaking.
 Writing to another process' memory, either on purpose or accidentally, can
 invalidate its executing state completely. On most modern systems this is taken
-care of by hardware which notifices the operating system of memory-access
-violations.
+care of by memory paging, which triggers exceptions when a process tries to use
+memory not assigned to it.
 
-The same principles should apply to extensions as well. An extension should not
-be allowed to peek or modify its host's data. Ideally, neither should it be
-able to read from or write to other plugin instances, which relates to running
-them in separate sandboxes or a single shared one.
+The same principles should arguably apply to plugins as well. A plugin should
+not be allowed to peek or modify its host's data. Ideally, neither should it be
+able to read from or write to other plugin instances. This relates to running
+plugins in separate sandboxes per-instance, per-plugin class or using a single
+shared one. In the context of process-based plugins, this is generally done by
+the operating system itself. Thread-driven solutions however naturally share
+memory, and the problem of isolating memory in them will be addressed later in
+Chapter [ref-mem?]. We are not aware of previous research which addresses this
+problem, as when desiring this type of memory protection, process isolation is
+both the normal and natural solution.
 
 
-\section {Restricting External Calls}
+\section {Restricting System Calls}
 
-If all functions, signals, etc. were to be available to plugins, they'd have the
-same capabilities as the user running them. This also means that the user must
-trust every plugin and every program they would install and run equally. As a
-plugin often performs a small specific set of tasks, this is seldom required.
-Restricting access to functions without side effect, such as sorting, binary
-search and math functions is pointless however. They might be useful and do no
-harm.
+The ability of doing any input/output operations recides under normal
+circumstances in system calls, an essential interface for requesting services
+between a process and the operating system's kernel. Note that this is not
+strictly the case, there exists embedded systems where programs are not
+prevented from accessing the underlying hardware at all, but for most modern
+systems, this is the case. Without the ability to perform any input/output
+operations (any communication, not just `to screen', or `to file'), a process
+would be completely isolated. Any work performed by the process would be local
+to itself, and no external entity would observe it.
+
+Were all system calls available to plugins however, they would essentially
+have the same capabilities as the user running them. This would allow for
+arbitrary code execution with the user's privileges. Many programs only need to
+access a specific subset of these. For many, input/output to the standard
+streams \texttt{stdin}, \texttt{stdout} and \texttt{stderr} are sufficient apart
+from memory allocation. A controlled environment of execution can explicitly
+reject a subset of system calls. A sandboxing environment can also, instead of
+rejecting a program which uses them, emulate some of them, but in a harmless
+manner. A program running under \texttt{chroot} for instance, has a different
+directory as a root directory and can only access files in under it.
+
+Depending on the sandboxing method used, restrictions to system calls might
+require restricting access to methods which may perform system calls.
+\texttt{printf} for instance, will perform a \texttt{write} system call and
+\texttt{fopen} will perform an \texttt{open} system call. If only explicit
+system calls are rejected, implicit ones can be used to circumvent many of them.
+Restricting access to functions without side effect outside the program running
+them, such as sorting, binary search and math functions is pointless however.
+They are often useful and have no harmful side effects outside the program, so
+long as memory isn't shared between processes.
+
+In the context of plugins, which extend capabilities by performing a small set
+of tasks, this is seldom required. Communicating back to the host, and not the
+operating system directly is also often sufficient. Permitting arbitrary system
+calls also means that the user must trust every plugin and every program they
+would install and run equally.
 
 Rack Extensions for instance operate on audio buffers in-memory, and don't need
 to read/write files or raise signals on their own. Therefore a Rack Extension is
@@ -51,9 +89,15 @@ and how they should behave.
 
 \section {Existing Sandboxing Techniques}
 
-\subsection {Virtual Machines}
-
-todo
+Several sandboxing techniques exist with different purposes. Hardware
+virtualization abstracts hardware and emulates a computer to enable an entire
+operating-system environment to run inside it. Application virtualization on the
+other hand encapsulates the program in a virtual environment, so when the
+program believes that it's interfacing with the underlying operating system
+directly, it's interfacing with the virtualized environment (which may, in turn
+interface with the operating system). Though application virtualization may be
+relevant, hardware virtualization is definitely outside the scope of this
+thesis.
 
 \subsection {libdetox}
 
@@ -61,10 +105,15 @@ todo
 
 \subsection {Chromium}
 
-The web browser Chromium's sandbox operates on process level. Its Windows
-implementation operates by lowering its own privileges irrevocably before
-executing.
+The web browser Chromium's sandbox operates on a process level[ref-chrome]. Its
+Windows implementation operates by lowering its own privileges irrevocably
+before executing.
 
 By default, plug-ins for Chromium do not run in its sandbox however, as
-plug-ins can have arbitrary behavior, and some require accessing the file
-system. They do run in a different and communicate with Chromium's kernel.
+plug-ins can have arbitrary behavior, some require accessing the filesystem,
+others require network connections. They do run in a different process and
+communicate with Chromium's kernel.
+
+\subsection {Native Client}
+
+
