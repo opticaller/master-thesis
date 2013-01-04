@@ -105,9 +105,26 @@ thesis.
 
 \subsection {Chromium}
 
-The web browser Chromium's sandbox operates on a process level[ref-chrome]. Its
-Windows implementation operates by lowering its own privileges irrevocably
-before executing.
+Unlike monolithic browsers, which run in a single protection domain, Chromium
+is split into modules, the kernel and rendering engine. The browser kernel is
+trusted and acts on behalf of the user, while the rendering engine is untrusted
+and acts on behalf of ``the web'' with lowered privileges[ref-chrome].
+Inherently, an attacker that is able to, for instance, exploit a vulnerability
+in the HTML parser, the Document-Object Model (DOM) or the JavaScript
+interpreter, would still be limited to the privileges of the rendering engine.
+
+The architecture of Chromium isn't intended to prevent all kinds of attacks. A
+compromised rendering engine could still attack other web sites. It's intended
+to restrict an attacker (and the rendering engine itself) to using only the
+browser kernel interface. As such it aims to protect the user's file system, to
+prevent data loss or a ``drive-by malware installation'' for instance. The
+architecture achieves fault tolerance by running a separate instance of the
+rendering engine for each tab displaying content from the web.
+
+On Windows Chromium relies on Windows-specific features to sandbox the rendering
+engine. Before starting to render web content, the rendering engine irrevocably
+lowers its own privileges. Instead of running with the user's Windows security,
+the rendering engine runs with a greatly restricted security token.
 
 By default, plug-ins for Chromium do not run in its sandbox however, as
 plug-ins can have arbitrary behavior, some require accessing the filesystem,
