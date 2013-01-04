@@ -97,7 +97,7 @@ program believes that it's interfacing with the underlying operating system
 directly, it's interfacing with the virtualized environment (which may, in turn
 interface with the operating system). Though application virtualization may be
 relevant, hardware virtualization is definitely outside the scope of this
-thesis.
+thesis. All of the following sandbox techniques sandbox on a per-process level.
 
 \subsection {libdetox}
 
@@ -133,4 +133,39 @@ communicate with Chromium's kernel.
 
 \subsection {Native Client}
 
+Native Client (NaCl) is a sandboxing technology for running a subset of x86/ARM
+native code safely using software-based fault isolation[ref-nacl]. Although
+intended for browser-portable sandboxed binary modules, the research behind
+Native Client is more generally applicable. Its purpose is to bring near-native
+performance to running untrusted native code from a web browser with comparable
+safety to JavaScript for instance.
 
+For the purpose of building NaCl Modules a modified version of the GNU tool
+chain have been used, including GCC,. A modified version of the
+C-standard-library implementation newlib[ref-newlib] have been compiled against
+the resulting toolchain, rehosted to use NaCl trampolines to implement system
+services.
+
+When presented to an user, an untrusted module may contain arbitrary code and
+data. Therefore the NaCl runtime verifies that the module conforms to some
+validity rules regarding, for instance, certain instructions, interrupts, system
+calls. The runtime further uses segmented memory to constrain data and
+instruction memory references. By using segmented memory, NaCl is able to
+restrict access to shared libraries and other resources which might have been
+deliberately mapped into the the address space of all processes by the operating
+system, as, according to the authors, occur on the Windows platform.
+
+Since the original paper related research has been done on extending Native
+Client to language independance, including just-in-time compilation
+and self-modifying code[ref-lang-indep] as well as Portable Native Client
+(PNaCl) Executables[ref-pnacl] using the LLVM bitcode format as an intermediate
+format to represent an architecture-agnostic portable executable which is
+compiled in the runtime environment to the actual instruction-set architecture
+(ISA). Native Client has been supported through the Chrome Web Store in Google
+Chrome since version 14[ref-rel-14], released in late 2011. Native Client is
+currently scheduled to be enabled for all pages as well following the release of
+Portable Native Client[ref-pnacl-release].
+
+<rel-14: \url{http://chrome.blogspot.se/2011/08/building-better-web-apps-with-new.html}>
+
+<ref-pnacl-release: \url{https://developers.google.com/native-client/devguide/distributing#CWS}>
