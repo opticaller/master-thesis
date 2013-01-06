@@ -41,12 +41,13 @@ not poison zones around them.
 
 \section {Shadow Compression}
 
-This single-level shadow map makes a $1:1$ mapping impossible, the shadow memory
-would occupy the entire memory space and leave no room even for the running
-code. $1:2$ mappings would reserve half of the address space and so forth. On
-64-bit systems this is not a major issue, as the address space are many orders
-of magnitude larger than the physical memory available. 32-bit systems however
-have significantly limited address space.
+A single-level shadow map makes a $1:1$ byte-to-byte mapping impossible, the
+shadow memory would occupy the entire memory space and leave no room even for
+the running code. $1:2$ mappings would reserve half of the address space and so
+forth. On 64-bit systems this is not a major issue, as the address space are
+many orders of magnitude larger than the physical memory available. 32-bit
+systems however have significantly limited address space (4GB, a $1:2$ mapping
+would occupy 2GB).
 
 The compression ratio between real memory and shadow memory directly affects
 performance. If an aligned memory access is smaller than the compression ratio

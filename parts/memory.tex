@@ -1,66 +1,79 @@
 \chapter {Memory-Error Detection}
 
-To protect the host and other plugins from having their heaps and/or stacks
-modified, memory accesses between plugins and the host (and other programs) must
-be checked in one way or another. Memory protection is a part of most modern
-operating systems, and often has hardware support. This mechanism protects other
-processes from incorrect memory accesses to their memory. Naturally, all memory
-within a single process is shared by every thread of execution and all access
-control implemented on a per-process process level [quote fuckyes?].
- 
-Inherently, this built-in protection offered by the operating system is not
-applicable to a plugin model where memory is shared, such as in the thread-based
-environment provided by Reason.
-
-
-\section {Error-Detection Tools}
-
-Fortunately a lot of erroneous-memory-usage behavior can be detected in user
-space by using memory-error-detection tools. What they do essentially,
-regardless of their implementation, is that when a program is run under it every
-memory access becomes checked, and some kind of error is reported when incorrect
-usage is detected.
+Memory-error detection often works partly by, in some manner, tracking what
+memory is addressible and what is not. Then upon trying to access, or modify
+memory improperly an error is detected and reported back, and depending on the
+design, the memory-error detector potentially aborts execution. Aborting
+execution on erroneous memory accesses echoes the requirements of memory
+isolation between plugin instances.
 
 The tools differ in what errors they detect and, how likely they're detected and
 how they can be used. Some, such as Valgrind [link-to-paper-here], use runtime
 techniques, such as dynamic recompilation and run binaries out of the box.
-Others require that a program is recompiled in a certain way, such as specifying
+Others require that a program is compiled in a certain way, such as specifying
 additional compile-time flags. Inherently Valgrind can be used to detect memory
 errors in a program to which the source code or build environment is not readily
 available.
 
+To protect the host and other plugins running inside the same process from
+having their heaps and/or stacks read or modified, memory accesses between
+plugins and the host (and other programs) must be verified to be correct in one
+way or another. Memory protection available on most modern platforms, often
+reinforced by hardware support, operate on a process level. All memory within a
+process is naturally shared with every thread of execution, all access-control
+restrictions are implemented on a per-process level. Some thread
+implementations[ref-thread-userspace(multirefs)] are even implemented inside
+user space(/user mode?) making the kernel completely unaware of their
+existence at all.
+
+Memory-error detectors are able to track different things, and detect different
+kinds of memory errors. Inherently, they store different amounts of data, and
+are able to track more than whether a byte has been properly allocated or not.
+Valgrind for instance, tracks the validity, or \emph{defined-ness}, of every bit
+in addition to the byte's addressability. If we can instead encode which plugin
+instance owns a certain piece of memory, we should be able to identify when a
+plugin instance attempts to access memory which it does not own by using
+techniques similar to those used by memory-error detectors.
+
 To be relevant to our problem however, errors need to be able to be detected at
-the point of occurance, so that a plugin can abort when trying to do something
-it's not allowed to do, and not after. The main difference between our solution
-implies and what memory-error detectors provide out of the box is that the
-error detectors work on a per-process basis, so a memory access is either OK or
-not. We need a tool to detect whether a memory access is ok to perform for a
-certain plugin instance.
+the point of occurance, so that a plugin can be aborted when trying to do
+something it's not allowed to do, and not after. The main difference between our
+solution and what memory-error detectors provide out of the box is that the
+error detectors work on a per-process basis.
 
 
-\section {Shadow Map}
+\section {Shadow Memory}
 
-Common to the two tools which we summarize for background purpose is that they
-use some sort of shadow map. That is, memory addresses mapped to a shadow value
-which stores some data related to that range of addresses. The tools differ in
+Many different tools use shadow memory to store metadata corresponding to the
+actual memory. That is, memory addresses are mapped to a shadow value which
+stores some data related to that range of addresses. The tools differ in
 granularity. For instance, Valgrind detects errors on a bit level, while
 AddressSanitizer detects errors on a per-byte level. The tools also replace or
-hook memory-related functions including as \texttt{malloc} or \texttt{free} to
-be able to track valid memory blocks.
+hook memory-related functions including \texttt{malloc} and \texttt{free} to be
+able to track valid memory blocks. That is, when memory is allocated, the
+corresponding shadow memory must be marked as accessible, and marked as
+inaccessible when not allocated, to not introduce false positives or negatives.
 
-For this thesis we'll consider a model in which the plugin instance is actually
-encoded into this shadow map. This way we can detect not only if the memory is
-ok to access by the entire program, but also if it can be accessed by the actual
-plugin instance. This part is covered later in Chapter [REFERENCE HERE].
+What's actually encoded in the shadow memory can be arbitrary. For this thesis
+we'll consider a model in which the plugin instance is encoded into the shadow
+memory. This way we can detect not only if the memory is correct on a process
+level, but rather if it can be accessed by the plugin instance. This part will
+be covered later in Chapter [ref-shadow].
 
-\subsection {Multi-Level Shadow Map}
-
-Blah blah Valgrind more levels, ASan single level.
+How the shadow memory is compressed, stored and accessed has impacts both on
+performance and feasibility. Valgrind for instance, stores more than a byte of
+information for every memory byte available on the system, something impossible
+without any compression. AddressSanitizer however uses flat continous shadow
+memory with completely different performance characteristics while still able to
+to detect many common memory errors.
 
 
 \section {Valgrind}
 
 Overhead.
+Valgrind for instance, tracks the \emph{defined-ness} of every bit and, as of
+their $2007$ paper, stores $10$ bytes in total per $8$ bytes of addressable
+memory.
 
 \subsection {Hooks}
 
