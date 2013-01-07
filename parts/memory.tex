@@ -72,8 +72,10 @@ to detect many common memory errors.
 
 Overhead.
 Valgrind for instance, tracks the \emph{defined-ness} of every bit and, as of
-their $2007$ paper, stores $10$ bytes in total per $8$ bytes of addressable
-memory.
+their $2007$ paper, stores $10$ bytes of information in total per $8$ bytes of
+addressable memory.
+
+FORTSÄTT HÄR
 
 \subsection {Hooks}
 
@@ -84,13 +86,120 @@ memory.
 
 \section {AddressSanitizer}
 
-Stuff.
+AddressSanitizer is a simple compile-time solution which instruments the
+\texttt{load} and \texttt{store} instructions of a program to preceed them with
+checks to validate the instruction operand.
+It's a tool used to detect out-of-bounds accesses to memory by poisoning
+(marking as invalid) so-called `red-zones' around allocated memory.
+Its paper reports an average slowdown of 2x, which allows it to be used in
+realtime in Chromium for instance, where it has found several hundred
+bugs[ref-asan].
 
-\subsection {Hooks}
+Detecting out-of-bounds accesses to memory includes insertion of red-zones
+between stack- and globally-allocated memory.
+This prevents memory accesses to stack-allocated variables to `spill over' to
+adjacent variables.
+Stack-allocated red-zones are unpoisoned just before the function returns, as
+memory allocated on the stack is freed by the stack pointer decreasing.
+Were this not done, other function calls' stack-allocated variables might be
+part of old calls' red-zones.
+In this case they would still be poisoned and, though correct, the memory
+accesses would generate errors.
 
-\subsection {Characteristsics}
+\begin{figure}[ht]
+\begin{lstlisting}[language=C]
+// Before AddressSanitizer
+*address = ...;  // or: ... = *address;
+\end{lstlisting}
 
-\subsection {Shadow Map}
+\begin{lstlisting}[language=C]
+// After AddressSanitizer
+if (IsPoisoned(address)) {
+    ReportError(address, kAccessSize, kIsWrite);
+}
+*address = ...;  // or: ... = *address;
+\end{lstlisting}
+\caption{Simplified description [ref-asan-desc] of the AddressSanitizer
+instrumentation of dereferences of memory though reads or writes.}
+\end{figure}
+
+<asan-desc: http://code.google.com/p/address-sanitizer/wiki/AddressSanitizerAlgorithm>
+
+\noindent Memory accesses to random locations will not be found by the
+instrumented code itself before the point of occurence, but the runtime library
+will catch memory errors signals from the kernel and generate an error message
+including a stack trace.
+Any invalid accesses to memory not covered by the red-zone, which are undetected
+by the operating system will not be detected by AddressSanitizer either.
+Stack memory for instance isn't explicitly requested from the operating system
+explicitly.
+Instead a continuous stack region is reserved when a thread is created, and
+though variables on the stack haven't been allocated yet, the entire stack
+region is accessible.
+This makes AddressSanitizer's original implementation unable to detect
+use-after-return bugs, illustrated in Figure [ref-figure], though an
+experimental feature addresses this limitation[ref-use-after-return].
+Random invalid accesses to memory which is not allocated by the running code,
+yet might have been allocated memory will not be able to be detected by the
+instrumented code itself.
+
+<use-after-return: http://code.google.com/p/address-sanitizer/wiki/ExampleUseAfterReturn>
+
+\begin{figure}[ht]
+\begin{lstlisting}[language=C]
+#include <stdio.h>
+
+int *f()
+{
+    int n = 123456;
+    return &n;
+}
+
+int main ()
+{
+    int *x = f();
+    printf("%d\n", *x); // use of stack-allocated memory after return
+    return 0;
+}
+\end{lstlisting}
+\caption{Use after return, a bug not detectable in the original AddressSanitizer
+implementation.}
+\end{figure}
+
+After being \texttt{free}'d, heap memory segments are stored in a quarantine
+area, and the shadow bytes are marked as inaccessible for as long as it is in
+the quarantine.
+By default this quarantine is $256 MB$.
+Any accesses to memory which is quarantined will detect usage-after-free bugs
+based on dangling pointers erroneously kept alive, or prematurely
+\texttt{free}'ing blocks.
+
+\subsection {Shadow Memory}
+
+AddressSanitizer's simple single-level shadow map is what allows it to keep its
+performance and its instrumented code relatively small.
+By default AddressSanitizer reserves $1/8th$ by default of the memory space for
+shadow memory, but it does not allocate it.
+Every $8$ bytes then corresponds to $1$ byte.
+To translate from address to shadow memory the address is divided by $8$
+(through a shift by $3$, for performance), and then the offset, or base address,
+of the shadow memory is added.
+
+A continuous fraction of the whole memory space is mapped up, but not reserved
+using \texttt{mmap}.
+On read the corresponding page gets loaded by the OS and initialized to $0$.
+For AddressSanitizer, this value $0$ means that all corresponding memory bytes
+are ok to access.
+This is the common path.
+
+The less common path requires further examination of the shadow byte.
+When the shadow byte isn't $0$, then the shadow byte encodes either which of
+these than of these ($8$ by default) bytes are accessible, or that none of them
+are.
+In order to prevent instrumented code from reading or modifying the the shadow
+memory itself, the shadow memory pages corresponding to the memory bytes where
+the shadow memory recides are marked as inaccessible so that access to them
+trigger page faults which are caught by the runtime, which then aborts.
 
 
 \section {Per-Instance Address Spaces}
@@ -122,5 +231,5 @@ Failure to protect return addresses can lead to a buffer overflow causing the
 plugin to return to uninstrumented code by smashing the stack. Existing software
 vulnerable to such exploits are quite commonly found. The attack itself is well
 explained by  [phrack-pseudonym, ref]. A program which \emph{intentionally}
-exposes itself to such vulnerabilities or performs such an attack upon itself is
-even easier to write.
+exposes itself to such vulnerabilities or performs such attacks upon itself is
+of course even easier to write.
