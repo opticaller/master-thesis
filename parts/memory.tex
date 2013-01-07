@@ -68,20 +68,76 @@ memory with completely different performance characteristics while still able to
 to detect many common memory errors.
 
 
-\section {Valgrind}
+\section {Valgrind/Memcheck}
 
-Overhead.
-Valgrind for instance, tracks the \emph{defined-ness} of every bit and, as of
-their $2007$ paper, stores $10$ bytes of information in total per $8$ bytes of
-addressable memory.
+Memcheck is a memory-error detector implemented with the binary-instrumentation
+framework Valgrind[ref-bit-precision].
+Memcheck uses dynamic binary instrumentation to allow the
+program to be checked on runtime.
+Inherently, programs do not have to be recompiled to be error checked by
+Memcheck.
+All parts of a client program are instrumented by Memcheck, including
+dynamically-linked libraries, which allows for total coverage.
+Even of code which is not under control by the user.
 
-FORTSÄTT HÄR
+Memcheck tracks addressability and validity of every byte of memory used by the
+program.
+It tracks all heap blocks allocated with \texttt{malloc()}, \texttt{new} and 
+\texttt{new[]} and detect bad or repeated frees of heap blocks.
+By tracking heap blocks, it can also report memory leaks at program termination.
+It also supplements functions like \texttt{strcpy()} and \texttt{memcpy()} with
+additional checks, verifying that their arguments do not overlap.
 
-\subsection {Hooks}
+Memcheck operates with great precision.
+As of their 2005 paper, it's the only tool which they are aware of that detect
+errors with bit, and not byte, precision.
+Every byte, including registers, is shadowed with a mask of which bits are
+defined.
+When performing instructions on one or more operands, the validity masks are
+combined into a new one in accordance with the instruction.
+A shift instruction for instance would shift the validity bits as well.
+Then when jumps depending on or output of a value which outcome isn't completely
+defined occur, an error is reported.
 
-\subsection {Characteristsics}
+Valgrind's dynamic binary instrumentation along with Memcheck's instrumented
+checks unfortunately add significant overhead.
+A program running under nulgrind, a do-nothing tool for Valgrind, is reported
+to have a geometric-mean slowdown factor of $4.9$ for a number of tested
+programs.
+Memcheck also add further overhead, and the corresponding mean reported is here
+$25.7$.
+In their $2007$ paper, they report a slowdown of $22.2$ with moderate memory
+usage[ref-grind-shadow]
+Though this is fast enough for usage in large applications, as have been done
+with success in several large-scale open-source projects, this significant
+overhead may discourage continuous usage of the tool.
 
-\subsection {Shadow Map}
+For code with tough real-time constraints, such as Reason, this overhead
+unfortunately makes Valgrind/Memcheck impossible to use or very restricted in
+usage.
+Especially in combination with the additional logging and asserts inserted into
+debug builds.
+
+\subsection {Shadow Memory}
+
+Memcheck implements a similar basic shadow-memory data structure to several
+other shadow-memory tools.
+It however implements several novel optimizations that speed up common cases.
+The shadow memory is compressed into two levels, one `primary map' which maps
+$64k$ blocks to `secondary maps'.
+The secondary maps include metadata on a per-byte level.
+Initially all primary-map entries point to a `no-access distinguished secondary
+map', which is marked as inaccessible and never modified.
+usage of Valgrind at all.
+The secondary map contains addressability and validity bits.
+As partially defined bytes are uncommon, Memcheck tracks them in a sparse
+third-level table.
+This allows for storing only two bits per byte in the secondary map.
+These bits can indicate that the byte is either not accessible, undefined,
+completely defined or partially defined.
+Only when a byte is partially defined its validity bits must be examined.
+
+
 
 
 \section {AddressSanitizer}
@@ -139,6 +195,9 @@ region is accessible.
 This makes AddressSanitizer's original implementation unable to detect
 use-after-return bugs, illustrated in Figure [ref-figure], though an
 experimental feature addresses this limitation[ref-use-after-return].
+We suspect that this feature might be implemented by poisoning the stack
+variables before the callee function returns, and unpoisoned when new memory
+is allocated in its place on the stack.
 Random invalid accesses to memory which is not allocated by the running code,
 yet might have been allocated memory will not be able to be detected by the
 instrumented code itself.
@@ -166,13 +225,13 @@ int main ()
 implementation.}
 \end{figure}
 
-After being \texttt{free}'d, heap memory segments are stored in a quarantine
+After being freed, heap memory segments are stored in a quarantine
 area, and the shadow bytes are marked as inaccessible for as long as it is in
 the quarantine.
 By default this quarantine is $256 MB$.
 Any accesses to memory which is quarantined will detect usage-after-free bugs
 based on dangling pointers erroneously kept alive, or prematurely
-\texttt{free}'ing blocks.
+freeing blocks.
 
 \subsection {Shadow Memory}
 
@@ -220,7 +279,7 @@ either have too much space allocated and the host's total address space
 might run out when using too many extensions. Also, if the address space for an
 extension runs out, it can't allocate more memory.
 
-Worst of all is possibly the false sense of security this solution imposes when
+Worst of all is possibly the false sense of security this solution provides when
 attempting to protect against malicious plugins, or malicious input to them
 through bugs. As the stack recides inside the instance's address space, it means
 that all of the stack can be written to. However, the only part a a plugin
