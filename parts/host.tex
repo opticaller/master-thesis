@@ -1,58 +1,75 @@
 \chapter {Hosting Environment}
 
 The host is responsible for providing a state in which the plugin can be loaded,
-unloaded and execute properly, a hosting environment. This of course includes
-loading/unloading, restarting and shutdown of plugins, as well as initialization
-of any data that may be used by the plugins themselves etc. Though the
-compilation pass used to instrument the code should ideally be done by the host
-itself, this policy and its implications, along with the pass itself is
-described later in Chapter [ref].
+unloaded and execute properly, a hosting environment.
+This of course includes loading/unloading, restarting and shutdown of plugins,
+as well as initialization of any data that may be used by the plugins themselves
+etc.
+Though the compilation pass used to instrument the code should ideally be done
+by the host itself, as incoming code should be untrusted, this policy along with
+implications, along with the pass itself is described later in Chapter [ref].
 
 The host is also responsible for keeping track of plugin resources and providing
-an API to allocate, access and free these. This includes usage of standard
-memory-allocation functions such as \texttt{malloc} and \texttt{new}, keeping
-track of file descriptors etc. Associating these resources with a specific
-plugin instance prevents resource leaking after the instance has been shut down.
+an API to allocate, access and free these.
+This includes usage of standard memory-allocation functions such as
+\texttt{malloc} and \texttt{new}, keeping track of file descriptors etc.
+Associating these resources with a specific plugin instance prevents resource
+leaking after the instance has been shut down.
 
 Even though instrumented plugin code is considered \emph{trusted}, certain
-operations, such as integer divisions aren't checked. Thus it's still possible
-for plugins to raise signals in some environments for certain operations, such
-as division by zero. Though this particular case could have been dealt with by
-instrumenting every single divide instruction, it's easier and more effective to
-have a signal handler to catch these types of errors, which trigger hardware
-interrupts and have no additional overhead when used correctly. Apart from
-raising these signals which can be caught by the host, the instrumentation pass
-is responsible for generating instrumented code that aborts before (if) any
-code which would have behaved maliciously or otherwise incorrect executes.
+operations, such as integer divisions aren't checked.
+Thus it's still possible for plugins to raise signals in some environments for
+certain operations, such as division by zero.
+Though this particular case could have been dealt with by instrumenting every
+single divide instruction, it's easier and more effective to have a signal
+handler to catch these types of errors, which trigger hardware interrupts and
+have no additional overhead when used correctly.
+If the error triggers a more severe error than a signal which can be caught, an
+instrumented check is required. Apart from raising these signals which can be
+caught by the host, the instrumentation pass is responsible for generating
+instrumented code that aborts before (if) any code which would have behaved
+maliciously or otherwise incorrect executes.
 
 The hosting environment includes external functions available to the plugin,
 including, not only the host's plugin API but also library functions in the C
-standard library and any system-specific functions such as the POSIX API. For
-instance, if a plugin raises the POSIX signal \texttt{SIGKILL}, the signal can
-not be blocked or ignored by the program, forcing it to abort.[ref] External
+standard library and any system-specific functions such as the POSIX API.
+For instance, if a plugin raises the POSIX signal \texttt{SIGKILL}, the signal
+can not be blocked or ignored by the program, forcing it to abort[ref]. External
 functions, including plugin APIs are covered further in Chapter [ref].
 
+TODO: More on this chapter after performing actual implementation..
 
 \section {Plugin Types}
 
-Plugins 
+TODO: Plugins can take many forms, blah blah.
 
 \subsection {Continuously-Running Plugins}
 
 A plugin which continuously runs, occasionally requesting/providing information
-back to the host naturally occupies at least one thread. Though a multi-threaded
-plugin would also be possible, each thread could be assigned the same
-plugin-instance id, this has some negative implications on the model proposed.
+back to the host naturally occupies at least one thread.
+Though a multi-threaded plugin would also be possible, the checks performed by
+a thread and the actual instruction are not performed atomically together.
+Memory could be shared as normal if all threads are assigned the same
+plugin-instance ids, but the reader should be aware of the race conditions which
+this model could introduce.
 
 The model proposes that the instrumented code performs each memory operation in
-two steps: Validate a memory operation, then perform it. Since this isn't done
-atomically, another thread running the same plugin instance could invalidate the
-check before, or even during, the actual memory operation. For instance, freeing
-a previously allocated block when the other thread writes to it. Another plugin
-could even have allocated and rewritten the entire block. To be consistent this
-two-step check has to be performed atomically. The trivial solution would be to
-add a shared global lock for every single memory operation, which would have
-devastating consequences for performance.
+two steps: Validate a memory operation, then perform it.
+Since this isn't done atomically, another thread running the same plugin
+instance could invalidate the check before, or even during, the actual memory
+operation.
+For instance, freeing a previously allocated block when the other thread writes
+to it.
+Another plugin could even have allocated and rewritten the entire block.
+To be consistent this two-step check has to be performed atomically.
+The trivial solution would be to add a shared global lock for every single
+memory operation, which would have devastating consequences for performance.
+
+One other potential solution is to have something like `checkpoints' where all
+threads wait, and when all running threads are either trying to allocate memory
+or waiting at checkpoints any memory allocations are performed and the threads
+could then resume execution.
+This would likely impose significant overhead.
 
 For a one-to-one mapping between threads and plugins like these (single-threaded
 continuously-running plugins), we expect nothing out of the ordinary.
@@ -62,13 +79,17 @@ continuously-running plugins), we expect nothing out of the ordinary.
 Plugins respond to events, such as audio-buffer callbacks. This can take the
 form of tasks, where §
 
+TODO: Relate to Rack Extensions.
+
 \subsection {Hybrid Model}
+
+TODO: Both continuously running and callbacks.
 
 
 \section {Resource Limits}
 
-Blah blah, too much memory, using too much cpu, not responding fast enough (tick
-takes forever). TODO
+TODO: Blah blah, too much memory, using too much cpu, not responding fast enough
+(tick takes forever).
 
 
 \section {Global Initialization}
@@ -90,24 +111,28 @@ Thread-pool stuff.
 
 Ideally a plugin instance should shut down gracefully when misbehaving.
 Allocated resources, such as memory or file descriptors, should be deallocated
-or closed. These resources need to be tracked, even for the case where a plugin
-doesn't per-se misbehave. Even if a plugin exits properly, but haven't for
-instance closed file descriptors or \texttt{free}'d all allocated memory, there
-would be resource/memory leaks, potentially quite severe.
+or closed.
+These resources need to be tracked, even for the case where a plugin doesn't
+per-se misbehave at any point of execution.
+Even if a plugin exits properly, but haven't for instance closed file
+descriptors or freed all heap-allocated memory, there would be resource/memory
+leaks, potentially quite severe.
 
 The requirements for properly sandboxed plugins are more strict than that
-however. A malicious plugin can call any external functions with completely
-arbitrary arguments. This includes double-\texttt{free}'ing previously
-allocated memory, a bug which can lead to serious memory corruption for the
-entire process from which it is not able to recover.
+however.
+A malicious plugin can call any external functions with completely arbitrary
+arguments. This includes double-freeing heap-allocated memory, a bug which can
+lead to serious memory corruption for the entire process from which it is not
+able to recover.
 
-This provides a clear protection domain. Any function calls external to the
-module must be individually examined, and all arguments sanity checked.
-\texttt{div} for instance can't expect a non-zero divisor. It also means that
-no external function call can expect a following call with certain arguments;
-\texttt{malloc} can't expect a matching \texttt{free}, \texttt{fopen} can't
-expect a matching \texttt{fclose}. External functions will be discussed further
-in Chapter {chapref}. 
+This provides a clear protection domain.
+Any function calls external to the module must be individually examined, and all
+arguments sanity checked.
+\texttt{div} for instance can't expect a non-zero divisor as an argument.
+It also means that no external function call can expect a following call with
+certain arguments; \texttt{malloc} can't expect a matching \texttt{free},
+\texttt{fopen} can't expect a matching \texttt{fclose}. External functions will
+be discussed further in Chapter {chapref}. 
 
 In short, there should be no state from which the host can't recover. No code
 should, after being instrumented, be able to make the host environment

@@ -1,84 +1,97 @@
 \chapter {Memory-Error Detection}
 
 Memory-error detection often works partly by, in some manner, tracking what
-memory is addressible and what is not. Then upon trying to access, or modify
-memory improperly an error is detected and reported back, and depending on the
-design, the memory-error detector potentially aborts execution. Aborting
-execution on erroneous memory accesses echoes the requirements of memory
-isolation between plugin instances.
+memory is addressible and what is not.
+Then upon trying to access, modify or use memory in some incorrect manner an
+error is detected and reported back.
+Also, depending on the design, the memory-error detector potentially aborts
+execution.
+Aborting execution on erroneous memory accesses echoes the requirements of
+memory isolation between plugin instances.
 
 The tools differ in what errors they detect and, how likely they're detected and
-how they can be used. Some, such as Valgrind [link-to-paper-here], use runtime
-techniques, such as dynamic recompilation and run binaries out of the box.
+how they can be used.
+Some, such as Valgrind [link-to-paper-here], use run-time techniques, such as
+dynamic recompilation and run binaries out of the box.
 Others require that a program is compiled in a certain way, such as specifying
-additional compile-time flags. Inherently Valgrind can be used to detect memory
-errors in a program to which the source code or build environment is not readily
-available.
+additional compile-time flags.
+Inherently Valgrind can be used to detect memory errors in a program to which
+the source code or build environment is not readily available.
 
 To protect the host and other plugins running inside the same process from
 having their heaps and/or stacks read or modified, memory accesses between
 plugins and the host (and other programs) must be verified to be correct in one
-way or another. Memory protection available on most modern platforms, often
-reinforced by hardware support, operate on a process level. All memory within a
-process is naturally shared with every thread of execution, all access-control
-restrictions are implemented on a per-process level. Some thread
-implementations[ref-thread-userspace(multirefs)] are even implemented inside
-user space(/user mode?) making the kernel completely unaware of their
-existence at all.
+way or another.
+Memory protection available on most modern platforms, often reinforced by
+hardware support, operate on a process level.
+All memory within a process is naturally shared with every thread of execution,
+all access-control restrictions are implemented on a per-process level.
+Some thread implementations[ref-thread-userspace(multirefs)] are even
+implemented inside user space(/user mode?) making the kernel completely unaware
+of their existence at all.
 
 Memory-error detectors are able to track different things, and detect different
-kinds of memory errors. Inherently, they store different amounts of data, and
-are able to track more than whether a byte has been properly allocated or not.
+kinds of memory errors.
+Inherently, they store different amounts of data, and are able to track more
+than whether a byte has been properly allocated or not.
 Valgrind for instance, tracks the validity, or \emph{defined-ness}, of every bit
-in addition to the byte's addressability. If we can instead encode which plugin
-instance owns a certain piece of memory, we should be able to identify when a
-plugin instance attempts to access memory which it does not own by using
-techniques similar to those used by memory-error detectors.
+in addition to the byte's addressability.
+If we can instead encode which plugin instance owns a certain piece of memory,
+we should be able to identify when a plugin instance attempts to access memory
+which it does not own by using techniques similar to those used by memory-error
+detectors.
 
-To be relevant to our problem however, errors need to be able to be detected at
-the point of occurance, so that a plugin can be aborted when trying to do
-something it's not allowed to do, and not after. The main difference between our
-solution and what memory-error detectors provide out of the box is that the
-error detectors work on a per-process basis.
+Crucial to our problem however, errors need to be able to be detected at the
+point of occurance, before execution, so that a plugin can be aborted before
+malicious code is executed, and not after.
+A major difference between our solution and what memory-error detectors provide
+out of the box is that the error detectors work on a per-process basis.
 
 
 \section {Shadow Memory}
 
 Many different tools use shadow memory to store metadata corresponding to the
-actual memory. That is, memory addresses are mapped to a shadow value which
-stores some data related to that range of addresses. The tools differ in
-granularity. For instance, Valgrind detects errors on a bit level, while
-AddressSanitizer detects errors on a per-byte level. The tools also replace or
-hook memory-related functions including \texttt{malloc} and \texttt{free} to be
-able to track valid memory blocks. That is, when memory is allocated, the
-corresponding shadow memory must be marked as accessible, and marked as
-inaccessible when not allocated, to not introduce false positives or negatives.
+actual memory.
+That is, memory addresses are mapped to a shadow value which stores some data
+related to that range of addresses.
+The tools differ in granularity.
+For instance, Valgrind detects errors on a bit level, while AddressSanitizer
+detects errors on a per-byte level.
+The tools also replace or hook memory-related functions including
+\texttt{malloc()} and \texttt{free()} to be able to track valid memory blocks.
+That is, when memory is allocated, the corresponding shadow memory must be
+marked as accessible, and marked as inaccessible when not allocated, to not
+introduce false positives or negatives.
 
-What's actually encoded in the shadow memory can be arbitrary. For this thesis
-we'll consider a model in which the plugin instance is encoded into the shadow
-memory. This way we can detect not only if the memory is correct on a process
-level, but rather if it can be accessed by the plugin instance. This part will
-be covered later in Chapter [ref-shadow].
+What's actually encoded in the shadow memory can be arbitrary.
+For this thesis we'll consider a model in which the plugin instance is encoded
+into the shadow memory.
+This way we can detect not only if the memory is correct on a process level, but
+rather if it can be accessed by the plugin instance.
+This part will be covered later in Chapter [ref-shadow].
 
 How the shadow memory is compressed, stored and accessed has impacts both on
-performance and feasibility. Valgrind for instance, stores more than a byte of
-information for every memory byte available on the system, something impossible
-without any compression. AddressSanitizer however uses flat continous shadow
-memory with completely different performance characteristics while still able to
-to detect many common memory errors.
+performance and feasibility.
+Valgrind for instance, stores more than a byte of information for every memory
+byte available on the system, something impossible without any compression.
+AddressSanitizer however uses flat continous shadow memory with completely
+different performance characteristics and is still able to detect out-of-bounds
+errors on a byte level, among a few other memory errors.
 
 
 \section {Valgrind/Memcheck}
 
 Memcheck is a memory-error detector implemented with the binary-instrumentation
 framework Valgrind[ref-bit-precision].
-Memcheck uses dynamic binary instrumentation to allow the
-program to be checked on runtime.
+Memcheck uses dynamic binary instrumentation to allow a program, or client, to
+be checked in run-time.
 Inherently, programs do not have to be recompiled to be error checked by
 Memcheck.
 All parts of a client program are instrumented by Memcheck, including
 dynamically-linked libraries, which allows for total coverage.
-Even of code which is not under control by the user.
+The framework even enables checking of code outside the user's control, as
+source code for runtime libraries are not always available, especially on
+\emph{certain} platforms.
 
 Memcheck tracks addressability and validity of every byte of memory used by the
 program.
@@ -264,31 +277,50 @@ trigger page faults which are caught by the runtime, which then aborts.
 \section {Per-Instance Address Spaces}
 
 For a broader coverage of of the process and for flavor, we'd like to mention
-another even more coarse-grained error-detection technique along with its flaws
-which was considered before AddressSanitizer was recommended to us, and why the
-solution was ultimately discarded even before we heard of AddressSanitizer.
+another even more coarse-grained error-detection technique along with flaws
+which was considered before the AddressSanitizer paper was recommended to us.
+It demonstrates how a seemingly simple and good solution may have fatal
+implications which may not have been originally considered.
+Though simple and easy to implement, the model showed some fatal flaws and was
+discarded even before AddressSanitizer was ultimately chosen.
 
 Placing each plugin instance's stack and heap into its own continuous address
-space allows for a single coarse-grained check against start and end address. By
-allocating a continous segment as a power of two, this can be done efficiently
-by masking the memory address to get its base address.
+space allows for a single coarse-grained check against start and end address.
+By allocating a continous segment as a power of two, this can be done 
+efficiently by masking the memory address to get its base address.
 
 On 32-bit platforms virtual address space is limited however, and if there's no
 good estimate on how much memory a plugin instance will use, the instance might
 either have too much space allocated and the host's total address space
-might run out when using too many extensions. Also, if the address space for an
-extension runs out, it can't allocate more memory.
+might run out when using too many extensions.
+Also, if the address space for an extension runs out, it can't allocate more
+memory, and would have to be restarted with a larger memory space.
+This might not be a problem on 64-bit platforms however, where address space
+might be viewed as abundant, and a plugin id could be given its own 32-bit
+address space without significantly restricting stuff.
 
-Worst of all is possibly the false sense of security this solution provides when
-attempting to protect against malicious plugins, or malicious input to them
-through bugs. As the stack recides inside the instance's address space, it means
-that all of the stack can be written to. However, the only part a a plugin
-instance should be able to modify freely are local stack variables. Other data
-such as return addresses need to be preserved in order to preserve control flow.
+In an untrusted environment however, the false sense of security this solution
+provides when attempting to protect against malicious plugins, or malicious
+input to them is severe.
+As our model, unlike Valgrind, was expected to run as a compiler pass and not
+instrument any runtime libraries, any runtime code would run untrusted.
+As the stack recides inside the instance's address space, it means that all of
+the stack can be written to.
+However, the only part a a plugin instance should be able to modify freely are
+local stack variables.
+Other data such as return addresses need to be preserved in order to preserve
+control flow.
 
 Failure to protect return addresses can lead to a buffer overflow causing the
-plugin to return to uninstrumented code by smashing the stack. Existing software
-vulnerable to such exploits are quite commonly found. The attack itself is well
-explained by  [phrack-pseudonym, ref]. A program which \emph{intentionally}
-exposes itself to such vulnerabilities or performs such attacks upon itself is
-of course even easier to write.
+plugin to perform a so-called return-to-libc attack by smashing the stack.
+This could potentially allow the tool to escape its own sandbox and escalate its
+privileges.
+Existing software which is unintentionally vulnerable to such exploits are quite
+commonly found[ref].
+The attack itself is well explained in [ref-phrack-stack].
+A program which \emph{intentionally} exposes itself to such vulnerabilities or
+performs such attacks upon itself is of course even easier to write, as
+explained in the mentioned article.
+The simplicity of performing this attack is partially mitigated by not allowing
+platform-specific assembly, but predicting register allocation still provides an
+attacker with means of constructing the attack.

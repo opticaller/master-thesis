@@ -1,19 +1,28 @@
 \chapter {Global Variables}
 
 The proposed solution implies that every single piece of memory is owned by a
-single plugin instance. Inherently, globals, as every other piece of memory, can
-not be shared between instances. As globals are naturally shared between every
-thread in a running program, this constitutes a problem that needs to be solved
-if global variables are to be accessible at all. Though it's possible in some
-cases to track usage of a variable back to 
+single plugin instance.
+Inherently, globals, as every other piece of memory, can not be shared between
+instances.
+As globals are naturally shared between every thread in a running program, this
+constitutes a problem that needs to be solved if global variables are to be
+accessible at all.
+Though it's possible in some cases to validate accesses of memory back to a
+global variable through static analysis, it does not cover their usage arbitrary
+pointers.
+Partially allowing uses of global variables where rejected uses are not detected
+at compile-time could lead to some nasty bugs which are almost impossible to
+track down.
 
 In this chapter, we describe a few very different solutions to the problem.
 Their applicability is highly context-dependent, the specific solution should be
-chosen after taking several factors into account. For the initial implementation
-done for Rack Extensions, we decided to go with only instrumenting storing
-instructions. For plugin-instance-isolation reasons non-constant globals were
-already forbidden. There was no sensitive data which needed protection, and
-Rack-Extension developers are trusted not to do anything malicious on purpose.
+chosen after taking several factors into account.
+For plugin-instance-isolation reasons non-constant globals were already
+forbidden in Rack Extensions.
+Therefore, due to time constraints, we decided to go with only instrumenting
+storing instructions.
+There was no sensitive data which needed protection, and Rack-Extension
+developers are actually trusted not to do anything malicious on purpose.
 Instrumenting only storing instructions also significantly decreased overhead
 both on code size and running speed.
 
@@ -22,22 +31,24 @@ both on code size and running speed.
 
 If memory access is only separated based on their plugin class and not their
 assigned plugin-instance ids then the globals problem becomes a bit easier.
-Globals have to be marked before they are used. As with memory allocation
-another block past the end of usable memory is required as well.
+Globals have to be marked before they are used.
+As with memory allocation another block past the end of usable memory is
+required as well.
 
 This can be solved by putting all globals inside a struct and replacing usage of
-them with their in-struct counterpart. Finally, add an additional memory block
-to the struct and add alignment up to block size. Have this struct be aligned to
-memory block size or largest alignment inside the struct, whichever is larger.
+them with their in-struct counterpart.
+Finally, add an additional memory block to the struct and add alignment up to
+block size.
+Have this struct be aligned to memory block size or largest alignment inside the
+struct, whichever is larger.
 We would like to note that after this step is done, no transformations which
 will alter this struct, such as scalar replacement of aggregates[ref] can be
 run.
 
 Note that in LLVM alignment inside non-packed structures are based on what the
-underlying code generator expects[ref]. If global variables require different
-alignment, then putting globals aligned into such a struct would require further
-work and investigation. We however expect this requirement to be fairly
-uncommon.
+underlying code generator expects[ref].
+If global variables require different alignment, then putting globals aligned
+into such a struct would require further work and investigation.
 
 \subsection {Read-Only Globals}
 
@@ -47,86 +58,98 @@ naturally accepted, and all writes are naturally rejected, as the global
 variables are not marked as accessible by anyone.
 
 This policy conflicts with global variables initialized through global
-constructors. In C a global variable can only take a value, whereas in C++ and
-other languages they can be initialized through arbitrary function calls which
-gets executed before main.
+constructors.
+In C a global variable can only take a value, whereas in C++ and other languages
+they can be initialized through arbitrary function calls which gets executed
+before main.
 
 We see two simple solutions to this problem when using read-only globals: Either
 trust the global constructors and leave them uninstrumented, which is very
-naive, as it's essentially allowing uninstrumented arbitrary-code execution, or
-enforce the policy that globals really can not be written to. A third solution
-would be marking them as accessible during initialization, as it is only
-performed once. In this final case, it's appropriate to put the globals in a
-struct like described above in Section [ref-shared-globals].
+naive in an untrusted environment, it's essentially allowing uninstrumented
+arbitrary-code execution, or enforce the policy that globals really can not be
+written to.
+A third solution would be marking them as accessible during initialization, as
+it is only performed once.
+In this final case, it's appropriate to put the globals in a struct like
+described above in Section [ref-shared-globals].
 
 
 \section {Instance-Local ``Globals''}
 
 One solution to the globals problem is easy to think of: Give each plugin
-instance its own local copy. If there are no global variables at runtime then
-there is no problem left to solve. This allows every plugin instance to be as
-isolated as possible while not enforcing read-only restrictions etc. on global
-variables. Out of simplicity, the globals are assumed to be repacked into a
-struct, which is somehow set up for the different instances. This simplifies an
-explanation of the model, and it's easier to not have the globals segmented
-either way.
+instance its own local copy.
+If there are no global variables at runtime then there is no problem left to
+solve.
+This allows every plugin instance to be as isolated as possible while not
+enforcing read-only restrictions etc. on global variables.
+Out of simplicity, the globals are assumed to be repacked into a struct, which
+is somehow set up for the different instances.
+This simplifies an explanation of the model, and it's easier to not have the
+globals segmented either way.
 
 As arbitrary global values can include pointers to other global variables
 copying them to the rest of the plugin instances after they've been initialized
-once is not valid in the general case, because the new set of globals will
-potentially be pointing back to the old global struct. It's possible to track
-properly typed pointers and translate them between blocks if they are pointing
-to inside the globals struct. It's not covering all cases, it's not invalid to
-have pointers pointing just outside the area, or even storing them typecast into
-non-pointer types such as \texttt{intptr\_t} in C99. Furthermore, any pointers
-pointing to memory that has been dynamically allocated would belong to the
-previous instance and that pointer would also be invalid to access after
-copying.
+once is not valid in the general case, because the new set of globals may be
+pointing back to the old global struct.
+It's possible to track properly typed pointers and translate them between blocks
+if they are pointing to inside the globals struct.
+Though in the more general case it's also valid to store a pointer with a
+certain fixed offset from a global variable, which would leave it pointing
+outside of existing globals.
+It's not covering all cases, it's not invalid to have pointers pointing just
+outside the area, or even storing them typecast into non-pointer types such as
+\texttt{intptr\_t} in C99.
+Furthermore, any pointers pointing to dynamically-allocated memory would still
+point to memory allocated by the instance initially initializing globals.
 
 The solution we suggest for having instance-local globals is to instrument the
-global constructors of a plugin to operate on an instance-local struct. These
-global constructors would then not run on initialization of a plugin, but rather
-on initialization of a plugin instance. There are some corner cases regarding
-non-pure constructors which will be discussed here under Section [ref-non-pure].
+global constructors of a plugin to operate on an instance-local struct.
+These global constructors would then not run on initialization of a plugin, but
+rather on initialization of a plugin instance.
+There are some corner cases regarding non-pure constructors which will be
+discussed here under Section [ref-non-pure].
 
 We would also like to have investigated the possibility of instrumenting the
-code to dereference a pointer to a globals struct instead. This way we could
-have transferred the plugin instance between threads by simply passing the
-pointer to the plugin instance's globals. This type of instrumentation seemed
-unsupported by the LLVM API at the time of writing, and the effort was
-subsequently dropped.
+code to dereference a pointer to an instance-owned globals struct instead.
+This way we could have transferred the plugin instance between threads by simply
+passing the pointer to the plugin instance's globals.
+This type of instrumentation seemed unsupported by the LLVM API at the time of
+writing, and the effort was subsequently dropped.
 
 \subsection {Thread-Local Globals}
 
-Making the global-struct thread local is a simple solution. The struct can
-however not be moved around, for the same reasons why a struct cannot simply be
-copied mentioned above. So having this struct thread-local would force that no
-more than a single instance of a plugin runs on a thread, and that no plugin
-instance runs concurrently on multiple threads. This would be suitable for a
-$1:1$ mapping between threads and plugin instances.
+Making the global-struct thread local is a simple solution.
+The struct can however not be moved around, for the same reasons why a struct
+cannot simply be copied mentioned above.
+So having this struct thread-local would force that no more than a single
+instance of a plugin runs on a thread, and that no plugin instance runs
+concurrently on multiple threads.
+This would be suitable for a $1:1$ mapping between threads and plugin instances.
 
 \subsection {Impure Global Constructors}
 
-When global functions are not pure, there are some corner cases in which a
-plugin instance would behave badly. There are cases where impure functions can
-be run from a globals perspective without having problems.
+When global functions are not pure, there are some corner cases in which
+repeatedly-performed initialization would behave badly.
+There are cases where impure functions can be run from a globals perspective
+without having problems.
 \texttt{int x = rand();} is a fine example, even though the plugin instances
 receive different values for x, they shouldn't have been expecting any
 particular values for x, just something ``random'', which will still apply for
-each single instance. Memory allocated through \texttt{malloc} will also be
-fine, as every instance is expecting a memory block of a certain size, and not
-a particular pointer value.
+every single instance.
+Memory allocated through \texttt{malloc} will also be fine, as every instance is
+expecting a memory block of a certain size, and not a particular pointer value.
 
 A constructed example would be expecting the first character of input from a
-stream, for instance, stdin: \texttt{int x = std::cin.get();}. In this case the
-plugin instances would all receive different characters, they would all be
-expecting the first line of input. This would leave a nasty bug that's hard to
-track down.
+stream, for instance, stdin: \texttt{int x = std::cin.get();}.
+In this case the plugin instances would all receive different characters, they
+would all be expecting the first line of input.
+This would leave a nasty bug that's hard to track down.
 
-We propose providing an API in which the plugin instances don't have access to
-impure functions with unwanted side effects. A plugin shouldn't in general have
-to get the first line of input directly from stdin. In the example stdin could
-have been logged by the host and an API function provided to receive the first
-character of stdin directly. This usage would be less error prone, and all
-instances would receive what they were expecting.
-
+To solve this we propose providing an API in which the plugin instances don't
+have access to impure functions with unwanted side effects.
+A plugin shouldn't in general have to get the first line of input directly from
+stdin.
+In the example stdin could have been logged by the host and an API function
+provided to receive the first character of stdin directly.
+This usage would be less error prone, and all instances would receive what they
+were expecting.

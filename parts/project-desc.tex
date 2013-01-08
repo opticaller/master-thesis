@@ -3,60 +3,76 @@
 \addcontentsline{toc}{chapter}{Project Description}
 
 Software extensions or plugins are used to add additional or optional
-capabilities to software. These plugins are often be written by third-parties,
-and not the software developers themselves. Such untrusted code can be very
-malicious and wreak havoc on an user's system when running unrestricted code. It
-is not uncommon that a plugin runs native code with the same privileges as the
-hosting application. [can I get a quote? examples?]
+capabilities to software.
+These plugins are often be written by third-parties, and not the software
+developers themselves.
+Such untrusted code can be very malicious and wreak havoc on an user's system
+when running unrestricted code.
+It is not uncommon that a plugin runs native code with the same privileges as
+the hosting application. [can I get a quote? examples of this? should be true?]
 
 Most plugins however only need to be able to access a few very specific
 functions in a certain API to perform their work and to communicate back to the
-hosting process. They might not need to write files to disk, or read an user's
-private data. Following the principle of least privilige\footnote{\emph{``Every
-program and every privileged user of the system should operate using the least
-amount of privilege necessary to complete the job.''} -- Jerome Saltzer,
-\emph{Protection and the control of information sharing in multics}, 1974.},
-plugins should only be allowed to use as much, or as little, that they actually
-require to perform their tasks. An example where where programs explicitly
-request access to resources are Android applications, where at least a few
-resources, such as network access have to be explicitly requested upon
-installation. The user can then decide whether they trust the program to use
-those specific resources or not.
+hosting process.
+They might not need to write files to disk, or read an user's private data.
+Following the principle of least privilige\footnote{\emph{``Every program and
+every privileged user of the system should operate using the least amount of
+privilege necessary to complete the job.''} -- Jerome Saltzer, \emph{Protection
+and the control of information sharing in multics}, 1974.}, plugins should only
+be allowed to use as much, or as little, that they actually require to perform
+their tasks.
+An example where where programs explicitly request access to resources are
+Android applications, where at least a few resources, such as network access
+have to be explicitly requested upon installation. The user can then decide
+whether they trust the program to use those specific resources or not.
 
 Sandboxing is a security mechanism for running untrusted programs (or plugins)
-safely. A good sandbox provides a restricted set of resources that the code is
-allowed to access. A few solutions to the sandboxing problem involve either
-limiting the plugin to use a scripting language using a specific API, or running
-each plugin in a separate process using operating-system specific features for
-lowering their priviliges and restricting their potential impact.
+safely.
+A good sandbox provides a restricted set of resources that the code is allowed
+to access.
+A few solutions to the sandboxing problem involve either limiting the plugin to
+use a scripting language using a specific API, or running each plugin in a
+separate process using operating-system specific features for lowering their
+priviliges and restricting their potential impact.
 
 Communication between processes and just having separate processes can introduce
-both overhead from context switches and latency as well. As Propellerhead's
-Reason, as a digital audio workstation, has a natural demand for low latency,
-all plugins run inside the host process driven by a thread pool. Rack
-Extensions, their plugin technology, are real-time digital synthesizers running
-native code to process a large amount of data inside a few-millisecond window
-created by a callback whenever an audio driver requires an additional buffer to
-be filled. Missing such a callback window also comes with a penalty, such as
-crackling sound. Minimizing any overhead is crucial to be able to run as many
-instances of these synthesizers as possible.
+both overhead from context switches and latency as well.
+As Propellerhead's Reason, as a digital audio workstation, has a natural demand
+for low latency, all plugins run inside the host process driven by a thread
+pool.
+Rack Extensions, their plugin technology, are real-time digital synthesizers
+running native code to process a large amount of data inside a few-millisecond
+window created by a callback whenever an audio driver requires an additional
+buffer to be filled.
+Missing such a callback window also comes with a penalty, directly noticeable by
+the user; crackling sound.
+Minimizing any overhead is crucial to be able to run as many instances of these
+synthesizers as possible.
+And musicians want more.
 
 For such extreme performance requirements, even being at the mercy of the OS
-scheduler was not an option. Any premature context switches, or even a high 
-number of optimal context switches are detrimental to performance. Inter-process
-communication (IPC) comes in a lot of flavors; files, sockets shared memory,
-etc. all with varying overhead in addition to context switches between the
-processes. With a thread-pool-driven solution, the host itself can schedule
-their own plugins and communicate with minimal overhead.
+scheduler was not an option.
+Any premature context switches, or even a high number of optimal context
+switches are detrimental to performance.
+Inter-process communication (IPC) comes in a lot of flavors; files, sockets
+shared memory, etc. all with varying overhead in addition to context switches
+between the processes.
+With a thread-pool-driven solution, the host itself can schedule their own
+plugins and communicate with minimal overhead.
 
 In this thesis we suggest a compiler-pass-based approach to sandboxing these
-plugins, and mitigating most problems. We aim to describe the problems as broad
-as possible to not limit what the scope of the thesis more than necessary. Rack
-Extensions, for instance, are written in C++, but the suggested solution is
+plugins, and mitigating most problems we've been able to come up with.
+We aim to describe the problems as broad as possible to not limit what the scope
+of the thesis more than necessary.
+Rack Extensions, for instance, are written in C++, but the suggested solution is
 intended to cover languages which can be compiled to a the LLVM intermediate
-format in general. Specifically, the compiler pass described works on the LLVM
-intermediate format itself and is unaware of the language which it has been 
-compiled from. Rack Extensions are made by developers who are trusted not to
-introduce anything malicious on purpose, but for the sake of this thesis, we
-make sure to cover sandboxing of purposely malicious code to the best of our
+format in general.
+The LLVM format itself is agnostic to which language it has been compiled from.
+Although the implementation considers a plugin to be compiled once, it may also
+be possible to extend it to cover dynamically-compiled languages using the LLVM
+infrastructure, so long as the code is instrumented prior to execution.
+
+Also, although Rack Extensions are made by developers who are trusted not to
+introduce anything malicious on purpose, for the sake of this thesis, we make
+sure to cover sandboxing of purposely malicious code to the best of our
 abilities.

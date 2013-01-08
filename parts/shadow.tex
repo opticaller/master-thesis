@@ -1,29 +1,40 @@
 \chapter {Shadow Memory}
 
-The shadow-memory model used by AddressSanitizer is very simple. A process'
-entire memory space gets mapped to a fraction of it. For instance, with an $1:8$
-compression, one continuous eigth of the addressable memory space gets reserved.
-8 bytes of memory in the address space then correspond to one byte in this
-map. The value of the byte encodes which of the 8 bytes are allocated. We'd like
-to point out that for this thesis, the compression ratio between shadow memory
-and main memory is a power of two. Though it may be technically possible to use
-other alignments, we find no reason to explore this area, LLVM doesn't support
-those alignments and instrumented code can be more efficient with powers of two.
+The shadow-memory model used by AddressSanitizer is very simple.
+A process' entire memory space gets mapped to a fraction of it.
+For instance, with an $1:8$ compression, one continuous eigth of the addressable
+memory space gets reserved.
+$8$ bytes of memory in the address space then correspond to one byte in this
+map.
+The value of the byte encodes which of the $8$ bytes are allocated.
+We'd like to point out that for this thesis, the compression ratio between
+shadow memory and main memory is a power of two.
+Though it maybe technically possible to use other alignments, there should be no
+sane reason to explore this area, LLVM doesn't support those alignments and
+instrumented code can be more efficient with powers of two.
 
 AddressSanitizer instruments LLVM Bitcode so that, when allocating memory, the
 corresponding fraction of addresses get marked as allocated in the shadow
-memory. The code is also instrumented so that, before every instruction which
-operates on memory, assertions are inserted to check their correctness before
-actually performing them.
+memory.
+The code is also instrumented so that, before every instruction which operates
+on memory, assertions are inserted to check their correctness before actually
+performing them.
 
-We propose a different encoding into the same shadow-map scheme. Whereas
-AddressSanitizer encodes into this byte how many of the corresponding $n$
-($n = 8$ in the previous case) original bytes have been allocated, we propose
-encoding a plugin-instance id instead. This way, we lose granularity, as a
-single $n$-byte block is either ok to read or write, or not. But it allows us to
-perform a quick check on whether the read is OK or not. The proposition is
-primarily a means of protection and isolation, not a debugging tool. Other
-encodings are of course possible, as well as different tools.
+We propose a different encoding into the same shadow-map scheme.
+Whereas AddressSanitizer encodes into this byte how many of the corresponding
+$n$ ($n = 8$ in the previous case) original bytes have been allocated, we
+propose encoding a plugin-instance id instead.
+This way we lose granularity and no longer verify memory usage on a byte level,
+as a single $n$-byte block is either ok to read or write, or not.
+It would have been possible to fit both a plugin id along with
+AddressSanitizer's original encoding, as they effectively use only a few bits of
+the shadow bytes (for $n=8$)[ref-asan].
+This would have given us fewer plugin ids, and a slower and larger instrumented
+check, but kept byte precision.
+The proposition is primarily a means of protection and isolation, not a
+debugging tool.
+But in the context of debugging, the option to compile a plugin with this check
+kept could be a good idea.
 
 For shadow-map specfics, we would like to point out AddressSantizer as the
 authoritive implementation of this shadow-memory technique. We have been able to
@@ -33,35 +44,55 @@ paper[ref] also provide a good benchmark over performance hits imposed by the
 technique.
 
 
-\section {Whitelist/Blacklist differences}
+\section {Whitelist Technique}
 
-TODO: Fill me? Does ASan really Blacklist edges? We whitelist allocated memory,
-not poison zones around them.
+AddressSanitizer is primarily a tool used to detect out-of-bounds accesses to
+allocated memory.
+As such, instead of whitelisting allocated memory, it allocates additional
+memory to insert a so-called red-zone on both sides of the allocated memory.
+The red-zone is blacklisted, or poisoned, in the shadow memory.
+For AddressSanitizer, the default shadow-memory value of $0$ means that a small
+chunk of memory is entirely accessible.
+
+Though this allows for a constant $O(1)$ marking of allocated memory, regardless
+of how large a heap-allocated chunk may be, it is unfortunately not appropriate
+for our case.
+Plugins need to be isolated from accessing memory which is owned by
+uninstrumented code, yet still allocated by the process.
+The default state for shadow memory should therefore be `poisoned'.
+As such, we're able to protect against all memory accesses to memory which has
+not been explicitly requested by the plugin instance itself.
+Inherently, we don't need to insert redzones between variables either.
+This could be done as a further error-detection feature, but it's not required
+for isolation purposes.
 
 
 \section {Shadow Compression}
 
 A single-level shadow map makes a $1:1$ byte-to-byte mapping impossible, the
 shadow memory would occupy the entire memory space and leave no room even for
-the running code. $1:2$ mappings would reserve half of the address space and so
-forth. On 64-bit systems this is not a major issue, as the address space are
-many orders of magnitude larger than the physical memory available. 32-bit
-systems however have significantly limited address space (4GB, a $1:2$ mapping
-would occupy 2GB).
+the running code.
+$1:2$ mappings would reserve half of the address space and so forth.
+On 64-bit systems this is not a major issue, as the address space are many
+orders of magnitude larger than the physical memory available.
+32-bit systems however have significantly limited address space (4GB, a $1:2$
+mapping would occupy 2GB).
 
 The compression ratio between real memory and shadow memory directly affects
-performance. If an aligned memory access is smaller than the compression ratio
-then only a single check in the shadow is needed. This is crucial to be able to
-provide access to basic types, such as \texttt{int}, \texttt{float} and
-\texttt{double}, with acceptable overhead.
+performance.
+If an aligned memory access is smaller than the compression ratio then only a
+single check in the shadow is needed.
+This is crucial to be able to provide access to basic types, such as
+\texttt{int}, \texttt{float} and \texttt{double}, with acceptable overhead.
 
 
 \section {Memory Management}
 
 Any memory usable by the plugin directly (without external function calls) needs
 to, regardless of how it was allocated, be marked as owned by the plugin
-instance before it can being used. After the memory is no longer accessible to
-the plugin instance it needs to be unmarked.
+instance before it can being used.
+After the memory is no longer accessible to the plugin instance it needs to be
+unmarked.
 
 \subsection {Memory Alignment}
 
@@ -69,98 +100,111 @@ the plugin instance it needs to be unmarked.
 
 As memory-access is granted based on memory blocks and not individual bytes,
 memory must be handled in multiples of the compression ratio and be aligned to
-the compression ratio boundary. For a $1:8$ ratio, that means all memory
-allocation must occur in multiples of $8$ and its base address be a multiple of
-$8$. This should, of course, be invisible to the plugin and sufficient memory
-should be allocated to accomodate the requested allocation size aligned to the
-proper boundary, as well as allocating any remaining space in the final block as
-all of it will be marked as accessible.
+the compression ratio boundary.
+For a $1:8$ ratio, that means all memory allocation must occur in multiples of
+$8$ and its base address be a multiple of $8$.
+This should, of course, be invisible to the plugin and sufficient memory should
+be allocated to accomodate the requested allocation size aligned to the proper
+boundary, as well as allocating any remaining space in the final block as all of
+it will be marked as accessible.
 
-There is however a boundary case not accounted for in the paragraph above. When
-memory is accessed, there exists no guarantee for memory pointers to be aligned
-to their access size. A memory access within a block aligned to its access size
-rounded up to the nearest power of two will stay inside the block. A potential
-problem arises when an unaligned access at the end of a memory block occurs.
+There is however a boundary case not accounted for in the paragraph above.
+When memory is accessed, there exists no guarantee for memory pointers to be
+aligned to their access size.
+A memory access within a block aligned to its access size rounded up to the
+nearest power of two will stay inside the block.
+A potential problem arises when an unaligned access at the end of a memory block
+occurs.
 
-Memory accesses not aligned to this boundary can easily occur. This includes
-maliciously by introducing an unaligned pointer and accidentally through
-incorrect pointer manipulation and typecasts. Whenever such an access is done,
-it may or trigger a segmentation fault on certain platforms, depending on the
-actual alignment. This is caught by the host environment. But whenever it falls
-through, it could overwrite data not owned by the plugin instance itself. We
-prefer to avoid relying on such hosting-environment-specific behavior.
+Memory accesses not aligned to this boundary can easily occur.
+This includes maliciously by introducing an unaligned pointer and accidentally
+through incorrect pointer manipulation and typecasts.
+Whenever such an access is done, it may or trigger a segmentation fault on
+certain platforms, depending on the actual alignment.
+This is caught by the host environment.
+But whenever it falls through, it could overwrite data not owned by the plugin
+instance itself.
+We prefer to avoid relying on such hosting-environment-specific behavior.
 
 Our proposed solution is primarily a means of protecting the host and other
-plugins and not an error-detection tool primarily. Therefore having such a case
-go undetected is deemed ok, so long as it doesn't cause any damage. We're
-already missing some erroreous boundary accesses from always allocating a
-certain multiple of bytes. We therefore propose that, whenever memory for $n$
-blocks should be allocated, regardless of how, we allocate an additional garbage
-block. Thus we allocate $n+1$ blocks, but only mark the shadow corresponding to
-the legitimate first $n$ blocks. This way accesses spilling past the final
-block will only be able to affect the garbage block as well, and not alter any
-outside data belonging to, for instance, the memory allocator. The plugin
-instance will have behaved incorrectly, but not in a way that has altered any
-external data.
+plugins and not an error-detection tool primarily.
+Therefore having such a case go undetected is deemed ok, so long as it doesn't
+cause any damage.
+We're already missing some erroreous boundary accesses from always allocating a
+certain multiple of bytes.
+We therefore propose that, whenever memory for $n$ blocks should be allocated,
+regardless of how, we allocate an additional garbage block. Thus we allocate
+$n+1$ blocks, but only mark the shadow corresponding to the legitimate first $n$
+blocks.
+This way accesses spilling past the final block will only be able to affect the
+garbage block as well, and not alter any outside data belonging to, for
+instance, the memory allocator.
+The plugin instance will have behaved incorrectly, but not in a way that has
+altered any external data.
 
 \subsection {Heap Allocation}
 
 Heap-allocated memory is a resource which needs to be tracked and validated when
-sent as a parameter to free or realloc etc. A plugin instance should not be able
-to free random memory addresses, as this can cause serious memory corruption. As
-the host needs to shut down a plugin instance gracefully it needs to know of
+sent as a parameter to \texttt{free()} or \texttt{realloc()} etc.
+A plugin instance should not be able to free random memory addresses, as this
+can cause serious memory corruption.
+As the host needs to shut down a plugin instance gracefully it needs to know of
 which heap-memory segments were allocated to that instance, so they can be
-safely returned to avoid memory leaks. The host also needs to keep track of how
-large the memory segments are, so that the corresponding call to free the memory
-can also unmark the corresponding shadow memory. This can be done by wrapping
-existing memory-allocation and memory-deallocation calls and does not require a
-custom memory allocator.
+safely returned to avoid memory leaks.
+The host also needs to keep track of how large the memory segments are, so that
+the corresponding call to free the memory can also unmark the corresponding
+shadow memory.
+This can be done by wrapping existing memory-allocation and memory-deallocation
+calls and does not require a custom memory allocator.
 
 An easy way to track these resources is to have a hash table for each plugin
-instance which maps the allocation's base address to its size. If there space is
-empty when a request to free this memory segment is performed, then the memory
-base address wasn't allocated by the plugin instance and the plugin instance
-should be aborted. When a plugin instance is shut down, then iterate through
-the hash table and free and unmark all still-allocated addresses. Optionally a
-warning concerning the memory leak could be issued as well.
+instance which maps the allocation's base address to its size.
+If there space is empty when a request to free this memory segment is performed,
+then the memory base address wasn't allocated by the plugin instance and the
+plugin instance should be aborted.
+When a plugin instance is shut down, then iterate through the hash table and
+free and unmark all still-allocated addresses.
+Optionally a warning concerning the memory leak could be issued as well.
 
 \subsection {Stack Allocation}
 
-Mark: Stack allocation, local variables
+TODO: Mark: Stack allocation, local variables
+TODO: Unmark: End of scope
 
-Unmark: End of scope
-
-Stack allocation is a bit more tricky than heap allocation. With heap allocation
-every allocation and deallocation is explicit. Stack allocation however is not.
+Stack allocation is a bit more tricky than heap allocation.
+With heap allocation every allocation and deallocation is explicit. Stack
+allocation however is not.
 To free stack memory, what's essentially done is moving the stack pointer.
-Anything past the stack pointer is considered garbage. This will however not
-automatically mark everything as freed in the shadow memory, and
-previously-allocated memory would still be marked as accessible. Which would be
-incorrect.
+Anything past the stack pointer is considered garbage.
+This will however not automatically mark everything as freed in the shadow
+memory, and previously-allocated memory would still be marked as accessible,
+which would be incorrect.
 
 At first glance, a simple solution to the stack-allocation problem would be to,
 once and for all, mark each entire stack space upon thread creation to belong to
-a plugin instance. Apart from forcing a 1:1 mapping between plugin instances and
-threads, this has serious security implications as well. The plugin instance
-should only be able to access the memory on the stack used for variables. It
-should not be able to otherwise alter the execution stack in any manner.
+a plugin instance.
+Apart from forcing a $1:1$ mapping between plugin instances and threads, this
+has serious security implications as well.
+The plugin instance should only be able to access the memory on the stack used
+for variables.
+It should not be able to otherwise alter the execution stack in any manner.
 
 If such alteration were possible by a plugin instance it could, intentionally or
 not, introduce buffer overruns and quite easily smash the stack[ref-phrack] to
-break execution flow. This would definitely grant the plugin instance to break
-out to shell and execute arbitrary commands, if we allowed inline machine
-assembly to be a part of the plugin. Though we'll place restrictions on this
-later in Chapter [ref-instr], we'd rather make the potentially over-cautious
-assumption that not properly preventing writes to parts of the stack not
-allocated for local variables or spilled registers will allow uninstrumented
-arbitrary-code execution. Regardless of the bug's potential impact, a plugin
-instance would preferably shut down when attempting to perform it.
+break execution flow.
+This would potentially grant the plugin instance to break out to shell and
+execute arbitrary commands.
+We'd rather make the potentially over-cautious assumption that not properly
+preventing writes to parts of the stack not allocated for local variables or
+spilled registers will allow uninstrumented arbitrary-code execution.
+Regardless of the bug's potential impact, a plugin instance would preferably
+shut down when attempting to perform it.
 
 TODO: How to do alloca? Replacing with malloc wouldn't help with complexity of
 the solution. Would still have to free() after.
 
 Execution flow which deviates from normal stack-based subroutine behavior will
-be handled in Chapter [chap-exception]. The same principle applies though, stack
-memory should be marked as owned by the plugin instance when and only when can
-potentially be accessed by the plugin instance.
-
+be handled in Chapter [chap-exception].
+The same principle applies though, stack memory should be marked as owned by the
+plugin instance when and only when can potentially be accessed by the plugin
+instance.

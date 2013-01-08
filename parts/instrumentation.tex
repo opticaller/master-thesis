@@ -1,5 +1,7 @@
 \chapter {Code Instrumentation}
 
+TODO: Write when implementation is done, or almost done.
+
 Blah blah opt pass.
 
 \section {Stack Allocation}
@@ -12,15 +14,17 @@ shadow boundary?)
 
 \section {Function Pointers}
 
-Arbitrary function calls could potentially be done using function pointers. If
-an extension could figure out where a piece of code resides
+Arbitrary function calls could potentially be done using function pointers.
+If an extension could figure out where a piece of code resides
 
 
 \section {Inline Assembly Code}
 
-Arbitrary code etc. Non-portable. Run arbitrary code. Maybe figure out where
-some dynamically-loaded functions reside and call those directly. System calls
-are often implemented through interrupts. 
+TODO: Arbitrary code etc. Non-portable. Run arbitrary code. Maybe figure out
+where some dynamically-loaded functions reside and call those directly. System
+calls are often implemented through interrupts. If inlined assembly code is
+allowed, all instrumentation on LLVM assembly is worthless, as it leaves an
+as-huge gap open.
 
 Functionality which should be optimized using assembly code on select platforms
 can be abstracted and placed in an API call and be implemented per-platform by

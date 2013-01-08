@@ -1,42 +1,47 @@
 \chapter {Sandboxing}
 
 In order to limit what an extension or another piece of program can do,
-restrictions must be imposed on code actually running on a system. Programs in
-general should not interfere with each other's execution. Neither should they be
-able to read or write each other's memory. It is also common to restrict which
-processes are able to make system calls and restrict access to other resources,
-such as files etc. Isolation of processes, enforcement of file-system
-permissions, restricting resources to users with superuser privileges etc. are
-responsibilities of the kernel with help from hardware, such as the
-memory-management unit (MMU).
+restrictions must be imposed on code actually running on a system.
+Programs in general should not interfere with each other's execution.
+Neither should they be able to read or write each other's memory.
+It is also common to restrict which processes are able to make system calls and
+restrict access to other resources, such as files etc.
+Isolation of processes, enforcement of file-system permissions, restricting
+resources to users with superuser privileges etc. are responsibilities of the
+kernel with help from hardware, such as the memory-management unit (MMU).
 
-Ideally the same principles should apply for extensions as well. A program is
-generally trusted to run code with its user's privileges, but extensions are
-expected to only access to the resources they require to perform their specific
-task. Ideally an extension would not inherit the privileges from its hosting
-environment, but rather only be able to access resources which it's been
-permitted to use.
+Ideally the same principles should apply for extensions as well.
+A program is generally trusted to run code with its user's privileges, but
+extensions are expected to only access to the resources they require to perform
+their specific atask. Ideally an extension would not inherit the privileges from
+its hosting environment, but rather only be able to access resources which it's
+been permitted to use.
 
 
 \section {Memory Accesses}
 
 A program should in general not be able to read from or write to another
-program's memory. Not properly protecting programs can, for instance, result in
-sensitive data, such as cryptographic keys or passwords in memory leaking.
+program's memory.
+Not properly protecting programs can, for instance, result in sensitive data,
+such as cryptographic keys or passwords in memory leaking.
 Writing to another process' memory, either on purpose or accidentally, can
-invalidate its executing state completely. On most modern systems this is taken
-care of by memory paging, which triggers exceptions when a process tries to use
-memory not assigned to it.
+invalidate the other process' executing state completely.
+On most modern systems this is addressed by memory paging, which triggers
+exceptions when a process tries to use memory not assigned to it.
 
-The same principles should arguably apply to plugins as well. A plugin should
-not be allowed to peek or modify its host's data. Ideally, neither should it be
-able to read from or write to other plugin instances. This relates to running
-plugins in separate sandboxes per-instance, per-plugin class or using a single
-shared one. In the context of process-based plugins, this is generally done by
-the operating system itself. Thread-driven solutions however naturally share
-memory, and the problem of isolating memory in them will be addressed later in
-Chapter [ref-mem?]. We are not aware of previous research which addresses this
-problem, as when desiring this type of memory protection, process isolation is
+The same principles should arguably apply to plugins as well.
+A plugin should not be allowed to peak or modify its host's data.
+Arguably, neither should it be able to read from or write to other plugin
+instances.
+Separating plugin instances relates to running plugins in separate sandboxes
+per-instance, per-plugin class or using a single shared one for all plugins,
+which only separate them from the host.
+In the context of process-based plugins, this is generally done by the operating
+system itself.
+Thread-driven solutions however naturally share memory, and the problem of
+isolating memory in them will be addressed later in Chapter [ref-mem?].
+We are not aware of previous research which addresses isolation of thread-driven
+plugins as, when desiring this type of memory protection, process isolation is
 both the normal and natural solution.
 
 
@@ -44,116 +49,130 @@ both the normal and natural solution.
 
 The ability of doing any input/output operations recides under normal
 circumstances in system calls, an essential interface for requesting services
-between a process and the operating system's kernel. Note that this is not
-strictly the case, there exists embedded systems where programs are not
-prevented from accessing the underlying hardware at all, but for most modern
-systems, this is the case. Without the ability to perform any input/output
-operations (any communication, not just `to screen', or `to file'), a process
-would be completely isolated. Any work performed by the process would be local
-to itself, and no external entity would observe it.
+between a process and the operating system's kernel.
+Note that this is not strictly the case, there exists embedded systems where
+programs are not prevented from accessing the underlying hardware at all, but
+for most modern systems, this is the case.
+Without the ability to perform any input/output operations (any communication,
+not just `to screen', or `to file'), a process would be completely isolated.
+Any work performed by the process would be local to itself, as no external
+entity would be able to observe it.
 
 Were all system calls available to plugins however, they would essentially
-have the same capabilities as the user running them. This would allow for
-arbitrary code execution with the user's privileges. Many programs only need to
-access a specific subset of these. For many, input/output to the standard
-streams \texttt{stdin}, \texttt{stdout} and \texttt{stderr} are sufficient apart
-from memory allocation. A controlled environment of execution can explicitly
-reject a subset of system calls. A sandboxing environment can also, instead of
-rejecting a program which uses them, emulate some of them, but in a harmless
-manner. A program running under \texttt{chroot} for instance, has a different
-directory as a root directory and can only access files in under it.
+have the same capabilities as the user running them.
+This would allow for arbitrary code execution with the running user's
+privileges.
+In the context of plugins, this is seldom required, or desireable to permit.
+Communicating back to the host, and not the operating system directly is also
+often sufficient.
+Permitting arbitrary system calls also means that the user must trust every
+plugin and every program they would install and run equally.
+
+Many programs only need to access a specific subset of these capabilities.
+For many, input/output to the standard streams \texttt{stdin}, \texttt{stdout}
+and \texttt{stderr} are sufficient apart from memory allocation.
+A controlled environment of execution can explicitly reject a subset of system
+calls, or a subset of arguments to them.
+A sandboxing environment can also, instead of rejecting a program which uses
+them, emulate some of them, but in a harmless manner.
+A program running under \texttt{chroot} for instance, has a different directory
+as a root directory and can only access files in under it.
 
 Depending on the sandboxing method used, restrictions to system calls might
 require restricting access to methods which may perform system calls.
 \texttt{printf} for instance, will perform a \texttt{write} system call and
-\texttt{fopen} will perform an \texttt{open} system call. If only explicit
-system calls are rejected, implicit ones can be used to circumvent many of them.
+\texttt{fopen} will perform an \texttt{open} system call.
+If only explicit system calls are rejected, implicit ones can be used to
+circumvent many of them.
 Restricting access to functions without side effect outside the program running
 them, such as sorting, binary search and math functions is pointless however.
 They are often useful and have no harmful side effects outside the program, so
 long as memory isn't shared between processes.
 
-In the context of plugins, which extend capabilities by performing a small set
-of tasks, this is seldom required. Communicating back to the host, and not the
-operating system directly is also often sufficient. Permitting arbitrary system
-calls also means that the user must trust every plugin and every program they
-would install and run equally.
-
 Rack Extensions for instance operate on audio buffers in-memory, and don't need
-to read/write files or raise signals on their own. Therefore a Rack Extension is
-compiled against a stripped-down, slightly modified C standard library and API
-functions specific to interacting with the plugin host. In addition to the
-security aspect, a limited API also communicate how plugins should be written
-and how they should behave.
+to read/write files or raise signals on their own.
+A Rack Extension is compiled against a stripped-down, slightly modified C
+standard library and API functions specific to interacting with the plugin host.
+In addition to the security aspect, a neat well-written limited API also
+communicate how plugins should be written and how they should behave in general.
 
 
 \section {Existing Sandboxing Techniques}
 
-Several sandboxing techniques exist with different purposes. Hardware
-virtualization abstracts hardware and emulates a computer to enable an entire
-operating-system environment to run inside it. Application virtualization on the
-other hand encapsulates the program in a virtual environment, so when the
-program believes that it's interfacing with the underlying operating system
-directly, it's interfacing with the virtualized environment (which may, in turn
-interface with the operating system). Though application virtualization may be
-relevant, hardware virtualization is definitely outside the scope of this
-thesis. All of the following sandbox techniques sandbox on a per-process level.
+Several sandboxing techniques exist with different purposes.
+Hardware virtualization abstracts hardware and emulates a computer to enable an
+entire operating-system environment to run inside it.
+Application virtualization on the other hand encapsulates the program in a
+virtual environment, so when the program believes that it's interfacing with the
+underlying operating system directly, it's interfacing with the virtualized
+environment (which may, in turn interface with the operating system).
+Though application virtualization may be relevant, hardware virtualization is
+definitely outside the scope of this thesis.
+All of the following sandbox techniques sandbox on a per-process level.
 
 \subsection {libdetox}
 
-...
+TODO: Describe libdetox to provide more than a single context for Sandboxing.
 
 \subsection {Chromium}
 
 Unlike monolithic browsers, which run in a single protection domain, Chromium
-is split into modules, the kernel and rendering engine. The browser kernel is
-trusted and acts on behalf of the user, while the rendering engine is untrusted
-and acts on behalf of ``the web'' with lowered privileges[ref-chrome].
+is split into modules, the kernel and rendering engine.
+The browser kernel is trusted and acts on behalf of the user, while the
+rendering engine is untrusted and acts on behalf of ``the web'' with lowered
+privileges[ref-chrome].
 Inherently, an attacker that is able to, for instance, exploit a vulnerability
 in the HTML parser, the Document-Object Model (DOM) or the JavaScript
 interpreter, would still be limited to the privileges of the rendering engine.
 
-The architecture of Chromium isn't intended to prevent all kinds of attacks. A
-compromised rendering engine could still attack other web sites. It's intended
-to restrict an attacker (and the rendering engine itself) to using only the
-browser kernel interface. As such it aims to protect the user's file system, to
-prevent data loss or a ``drive-by malware installation'' for instance. The
-architecture achieves fault tolerance by running a separate instance of the
-rendering engine for each tab displaying content from the web.
+The architecture of Chromium isn't intended to prevent all kinds of attacks.
+A compromised rendering engine could still attack other web sites.
+It's intended to restrict an attacker (and the rendering engine itself) to using
+only the browser kernel interface. As such it aims to protect the user's file
+system, to prevent data loss or a ``drive-by malware installation'' for
+instance. The architecture achieves fault tolerance by running a separate
+instance of the rendering engine for each tab displaying content from the web.
 
 On Windows Chromium relies on Windows-specific features to sandbox the rendering
-engine. Before starting to render web content, the rendering engine irrevocably
-lowers its own privileges. Instead of running with the user's Windows security,
-the rendering engine runs with a greatly restricted security token.
+engine.
+Before starting to render web content, the rendering engine irrevocably lowers
+its own privileges.
+Instead of running with the user's Windows security, the rendering engine runs
+with a greatly restricted security token.
 
 By default, plug-ins for Chromium do not run in its sandbox however, as
 plug-ins can have arbitrary behavior, some require accessing the filesystem,
-others require network connections. They do run in a different process and
-communicate with Chromium's kernel.
+others require network connections.
+The plug-ins do run in a different process and communicate with Chromium's
+kernel.
+
+TODO: Mention extensions? Do they run inside the rendering engine? They're safe?
 
 \subsection {Native Client}
 
 Native Client (NaCl) is a sandboxing technology for running a subset of x86/ARM
-native code safely using software-based fault isolation[ref-nacl]. Although
-intended for browser-portable sandboxed binary modules, the research behind
-Native Client is more generally applicable. Its purpose is to bring near-native
-performance to running untrusted native code from a web browser with comparable
-safety to JavaScript for instance.
+native code safely using software-based fault isolation[ref-nacl].
+Although intended for browser-portable sandboxed binary modules, the research
+behind Native Client is more generally applicable.
+Its purpose is to bring near-native performance to running untrusted native code
+from a web browser with comparable safety to JavaScript for instance.
 
-For the purpose of building NaCl Modules a modified version of the GNU tool
-chain have been used, including GCC,. A modified version of the
+For the purpose of building NaCl Modules a modified version of the GNU toolchain
+(GCC, Binutils etc.) have been used. A modified version of the
 C-standard-library implementation newlib[ref-newlib] have been compiled against
 the resulting toolchain, rehosted to use NaCl trampolines to implement system
 services.
 
 When presented to an user, an untrusted module may contain arbitrary code and
-data. Therefore the NaCl runtime verifies that the module conforms to some
-validity rules regarding, for instance, certain instructions, interrupts, system
-calls. The runtime further uses segmented memory to constrain data and
-instruction memory references. By using segmented memory, NaCl is able to
-restrict access to shared libraries and other resources which might have been
-deliberately mapped into the the address space of all processes by the operating
-system, as, according to the authors, occur on the Windows platform.
+data.
+Therefore the NaCl runtime verifies that the module conforms to some validity
+rules regarding, for instance, certain instructions, interrupts, system calls.
+The runtime further uses segmented memory to constrain data and instruction
+memory references.
+By using segmented memory, NaCl is able to restrict access to shared libraries
+and other resources which might have been deliberately mapped into the the
+address space of all processes by the operating system, as, according to the
+authors, occur on the Windows platform.
 
 Since the original paper related research has been done on extending Native
 Client to language independance, including just-in-time compilation
@@ -161,10 +180,11 @@ and self-modifying code[ref-lang-indep] as well as Portable Native Client
 (PNaCl) Executables[ref-pnacl] using the LLVM bitcode format as an intermediate
 format to represent an architecture-agnostic portable executable which is
 compiled in the runtime environment to the actual instruction-set architecture
-(ISA). Native Client has been supported through the Chrome Web Store in Google
-Chrome since version 14[ref-rel-14], released in late 2011. Native Client is
-currently scheduled to be enabled for all pages as well following the release of
-Portable Native Client[ref-pnacl-release].
+(ISA).
+Native Client has been supported through the Chrome Web Store in Google Chrome
+since version 14[ref-rel-14], released in late 2011.
+Native Client is currently scheduled to be enabled for all pages as well
+following the release of Portable Native Client[ref-pnacl-release].
 
 <rel-14: \url{http://chrome.blogspot.se/2011/08/building-better-web-apps-with-new.html}>
 

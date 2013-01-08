@@ -3,50 +3,56 @@
 \begin{quote}
 LLVM is a Static Single Assignment (SSA) based representation that provides
 type safety, low-level operations, flexibility, and the capability of
-representing `all' high-level languages cleanly. It is the common code
-representation used throughout all phases of the LLVM compilation strategy.
+representing `all' high-level languages cleanly.
+It is the common code representation used throughout all phases of the LLVM
+compilation strategy.
 \end{quote}
 
 <Quote: \texttt{http://llvm.org/docs/LangRef.html}>\\
 
 \noindent The LLVM compiler infrastructure provides an easy way of manipulating
-code in the LLVM intermediate representation (IR) format. Modifying code
-already compiled to this intermediate format enables our implementation to
-support multiple languages that are already supported by LLVM front-ends rather
-than a specific language.
+code in the LLVM intermediate representation (IR) format.
+Modifying code already compiled to this intermediate format enables our
+implementation to support multiple languages that are already supported by LLVM
+front-ends rather than a specific language.
 
 The type-safety of the LLVM Assembly Language prevents accidental bugs
-originating from implicit conversion between parameters. Unlike similar formats
-in which a register simply holds `a value', all parameters to LLVM instructions
-are explicitly typed. It does not mean LLVM isn't able to pass of incorrect type
-to instructions or function calls, it's just that they have to be explicitly
-typecast to do so. We have experienced that this can prevent creeping errors
-from occuring at all.
+originating from implicit conversion between parameters.
+Unlike similar formats in which a register simply holds `a value', all
+parameters to LLVM instructions are explicitly typed.
+It does not mean LLVM isn't able to pass of incorrect type to instructions or
+function calls, it's just that they have to be explicitly typecast to do so.
+We have experienced that this can prevent creeping errors from occuring at all.
 
 Operating in this RISC-like intermediate format also provides a clear and
 simple distinction between instructions performed on memory and arithmetics
-performed on temporary values. Consider an instruction set where \texttt{load}
-and \texttt{store} are the only instructions which read or modify memory. In
-such an instruction set a compiler pass used for protecting memory only have to
-consider these two instructions. LLVM IR has a few more instructions which
-operate on memory which we have to consider, but they're still relatively few
-and easily enumerable.
+performed on temporary values.
+Consider an instruction set where \texttt{load} and \texttt{store} are the only
+instructions which read or modify memory.
+In such an instruction set a compiler pass used for protecting memory only have
+to consider these two instructions.
+LLVM IR has a few more instructions which operate on memory which we have to
+consider, but they're still relatively few and easily enumerable compared to any
+CISC instruction set.
 
 <LLVM being RISC-like: \texttt{http://www.drdobbs.com/architecture-and-design/the-design-of-llvm/240001128}>
 
 Keep in mind that any new instructions added to the LLVM Assembly Language might
 also read and write to memory, so any instructions added to the language must
-also be inspected (or explicitly forbidden). To detect any new instructions that
-have to be considered, it's possible to have a compiler pass which explicitly
-whitelists instructions, so that any unexpected instructions would cause
-compilation to abort. From a security standpoint, whitelisting instructions
-explicitly is crucial to ensure that a new instruction doesn't go unnoticed.
+also be inspected (or explicitly forbidden).
+To detect any new instructions that have to be considered, it's possible to have
+a compiler pass which explicitly whitelists instructions, so that any unexpected
+instructions would cause compilation to abort.
+From a security standpoint, whitelisting instructions explicitly is crucial to
+ensure that a new instruction doesn't go by unnoticed.
 
 We purposefully do not attempt to provide a complete list of instructions and
-whether they require instrumentation or not. As a rule of thumb, instructions
-which only operate directly on local registers do not require instrumentation as
-they're local to the plugin instance running a particular function. Instructions
-with side effects outside of local registers need to be further examined.
+whether they require instrumentation or not.
+As a rule of thumb, instructions which only operate directly on local registers
+do not require instrumentation as they're local to the plugin instance running a
+particular function.
+Instructions with side effects outside of local registers need to be further
+examined.
 \texttt{load} is such an instruction, while it takes a local register as input,
 it dereferences the value as an address to read from the arbitrary location
 determined by its input.
@@ -84,43 +90,51 @@ declare i32 @puts(i8* nocapture) nounwind
 \caption{A ``Hello World'' program compiled by Clang to a LLVM Module}
 \end{figure}
 
-\noindent LLVM programs consists of Modules[ref-lang]. A Module normally
-corresponds to a translation unit of the compiler. It can contain functions,
-external declarations, global variables and symbol-table entries. It also
-contains information about the target target compiled to. The datalayout string
-contains information about the target, such as endianness, data-type sizes and
-alignment. The example target triple tells us that the target is a GNU
-environment on Linux running on an x86-64 architecture.
+\noindent LLVM programs consists of Modules[ref-lang].
+A Module normally corresponds to a translation unit of the compiler.
+It can contain functions, external declarations, global variables and
+symbol-table entries.
+It also contains information about the target target compiled to.
+The datalayout string contains information about the target, such as endianness,
+data-type sizes and alignment.
+The example target triple tells us that the target is a GNU environment on Linux
+running on an x86-64 architecture.
 
 These Modules can be linked together using the LLVM linker into a single Module.
-For the purpose of this thesis a plugin will be treated as a single Module. That
-is, before running our proposed compiler pass, the plugin has to be linked into
-a single Module.
+For the purpose of this thesis a plugin will be treated as a single Module.
+That is, before running our proposed compiler pass, the plugin has to be linked
+into a single Module.
+This module could very well be what's presented to the system as a
+`plugin file'.
 
 < ref-lang: \texttt{http://llvm.org/docs/LangRef.html} >
 
 
 \section {Instructions}
 
-An instruction specifies a single operation of an assembly language. They are
-the smallest unit of code. In machine code they are the only operations that a
-processor can perform directly. To be able to perform other operations several
-of these instructions are combined, often into larger subroutines.
+An instruction specifies a single operation of an assembly language.
+They are the smallest unit of code.
+In machine code they are the only operations that a processor can perform
+directly.
+To be able to perform other operations several of these instructions are
+combined, often into larger subroutines.
 
 Unlike CISC, and like for most RISC-like instruction sets, the LLVM Assembly
-Language only have a few instructions which operate on memory addresses. It
-provides a tiny interface between memory and registers, Instrumentation isn't
-required for the operations that only operate on pseudo-registers and have no
-side effects apart from assigning values to the pseudo-registers themselves.
+Language only have a few instructions which operate on memory addresses.
+It provides a tiny interface between memory and registers.
+Instrumentation isn't required for the operations that only operate on
+pseudo-registers and have no side effects apart from assigning values to the
+pseudo-registers themselves.
 LLVM is responsible for properly allocating enough stack memory for register
-spilling and to properly address them as well. Were this not the case, we
-couldn't expect LLVM to compile its own assembly format into a working binary at
-all.
+spilling and to properly address them as well.
+Were this not the case, we couldn't expect LLVM to compile its own assembly
+format into a working binary at all.
 
-We do however need to be concerned with explicit memory accesses that aren't
-pseudo-registers instead. Explicit memory accesses could recide anywhere in
-memory, unlike pseudo-registers, which are either spilled onto the stack or kept
-inside actual processor registers.
+We do however need to be concerned with explicit memory accesses not targeting
+pseudo-registers.
+Explicit memory accesses could recide anywhere in memory, unlike
+pseudo-registers, which are either spilled onto the stack or kept inside actual
+processor registers.
 
 \subsection {Stack Allocation: \texttt{alloca}}
 
@@ -132,24 +146,26 @@ inside actual processor registers.
 \end{figure}
 
 \noindent Stack allocation in LLVM is done using the \texttt{alloca}
-instruction. These instructions are interesting as well, they allocate new
-memory which can be read to or written later. As the thesis proposes a solution
-using shadow memory to look up whether some memory is accessible or not, stack
-allocated memory has to be marked as accessible before it can be used by the
-plugin.
+instruction.
+These instructions are interesting as well, they allocate new memory which can
+be read to or written later.
+As the thesis proposes a solution using shadow memory to look up whether some
+memory is accessible or not, stack allocated memory has to be marked as
+accessible before it can be used by the plugin.
 
 Allocating memory on the stack is a technically simple operation, by moving the
 \emph{stack pointer}, the stack either grows or shrinks, depending on the
-direction which it moves in. Therefore, freeing all stack-allocated variables
-from inside a function is done automatically when a function returns, and the
-stack pointer is moved to remove the top frame from the stack. Unlike
-stack-allocated memory however, the corresponding shadow-map entity is not
-automatically removed when a function returns however.
+direction which it moves in.
+Therefore, freeing all stack-allocated variables from inside a function is done
+automatically when a function returns, and the stack pointer is moved to remove
+the top frame from the stack.
+Unlike stack-allocated memory however, the corresponding shadow-map entity is
+not automatically removed when a function returns however.
 
 We addressed this by prepending all instructions which cause a function to
 return with code to remove the shadow-map entities corresponding to the
-stack-allocated memory segments. The procedure for doing this will explained
-further in Chapter [ref].
+stack-allocated memory segments.
+The procedure for doing this will explained further in Chapter [ref-instr].
 
 \subsection {\texttt{load} and \texttt{store}}
 
@@ -161,22 +177,25 @@ store i32 3, i32* %ptr                          ; stores 3 to *ptr
 \caption{The LLVM \texttt{load} and \texttt{store} instructions}
 \end{figure}
 
-\noindent Reads from and writes to memory are interesting operations. In some
-circumstances only write protection is required. This depends entirely on
-protection requirements imposed by the host environment, it's important to
-account for what kind of data the host protects, and quite possibly also what
-other plugins could protect. A plugin which provides a PGP[footnote-about-pgp]
-encryption feature to an email client would likely, at some point in time, store
-a secret encryption key in memory. Its state should definitely not be readable
-by other plugins which would otherwise potentially be able to leak the key.
+\noindent Reads from and writes to memory are interesting operations.
+In some circumstances only write protection is required.
+This depends entirely on protection requirements imposed by the host
+environment, it's important to account for what kind of data the host protects,
+and quite possibly also what other plugins could protect.
+A plugin which provides a PGP[footnote-about-pgp] encryption feature to an email
+client would likely, at some point in time, store a secret encryption key in
+memory.
+Its state should definitely not be readable by other plugins which could
+otherwise potentially be able to leak the key.
 
-Instrumenting memory accesses give quite some overhead however. A host which
-neither needs to protect its internal state from being read nor provide such
-guarantees to plugins inside its environment can choose to instrument only
-instructions which write to memory. This way a plugin can potentially read all
-data inside the running application, but it can not change any of it. This is
-still required to prevent system instability caused by a plugin modifying the
-host or another plugin's state.
+Instrumenting memory accesses give quite some overhead however.
+A host which neither needs to protect its internal state from being read nor
+provide such guarantees to plugins inside its environment can choose to
+instrument only instructions which write to memory.
+This way a plugin can potentially read all data inside the running application,
+but it can not change any of it.
+This is still required to prevent system instability caused by a plugin
+modifying the host or another plugin's state.
 
 Rack Extensions are such plugins, no really sensitive data is kept in the host,
 and as users want to pack as many instruments as possible into the application,
@@ -185,24 +204,30 @@ a large slowdown factor really makes the plugin less usable.
 \subsection {Volatility and Atomicity}
 
 Volatility and atomicity are both concurrent-programming concepts which fall
-outside the scope of this thesis. They are however very relevant to the subject
-itself. Volatile stores can be reordered relative to one another. We have not
-explored this behavior. As our instrumented code introduces branching, it is
-likely that this reordering constraint doesn't affect the order of approval and
-execution of memory accesses.
+outside the scope of this thesis.
+They are however very relevant to the subject itself.
+Volatile stores can be reordered relative to one another.
+We have not explored this behavior, but would like to mention it.
+As our instrumented code introduces branching, it is possible that this
+reordering constraint doesn't affect the order of approval and execution of
+memory accesses.
 
-Atomicity however is important. If an address is sanity checked, it follows that
-the following instruction must operate on the same address that the check was
-performed against. If the pointer variable can be changed from other locations,
-then it might be a good idea to copy the pointer into a local variable to ensure
-that, though the address may be old when the read/write is performed, at least
-the check and execution is both done on the same original address.
+Atomicity as a concept however is important.
+If an address is sanity checked, it follows that the following instruction must
+operate on the same address that the check was performed against.
+If the pointer variable can be changed from other locations, then it might be a
+good idea to copy the pointer into a local variable to ensure that, though the
+address may be old when the read/write is performed, at least the check and
+execution is both done on the same original address.
 
-Ideally, the instrumented code would be performed atomically along with say a
-write instruction, but unfortunately that has some performance implications.
-These factors also have to be taken into hand as well. So long as a plugin
-instance owns its own memory and runs in a single thread, the memory will not be
-free'd by another running while the plugin instance is using it. That is, it
-will not permission to use a chunk of memory between passing a check to permit a
-memory access and performing the actual memory access. In this scenario, memory
-checks appear to be atomically performed together with the write instruction.
+Ideally, the instrumented check and original instruction would be performed
+atomically along with say a write instruction, but this is likely to introduce
+negative performance implications.
+These factors also have to be taken into hand as well.
+So long as a plugin instance owns its own memory and runs in a single thread,
+the memory will not be freed by another running while the plugin instance is
+using it. That is, it will not permission to use a chunk of memory between
+passing a check to permit a memory access and performing the actual memory
+access.
+In this scenario, memory checks appear to be atomically performed together with
+the write instruction.
